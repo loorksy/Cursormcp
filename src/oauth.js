@@ -175,7 +175,8 @@ function loginPage(pending, error) {
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#0b1017" />
   <title>تفويض MCP</title>
-  <link rel="stylesheet" href="/styles.css?v=ui3" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234aa3ff'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/styles.css?v=ui4" />
 </head>
 <body class="login-page">
   <div class="login-box card">

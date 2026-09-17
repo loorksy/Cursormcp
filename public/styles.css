@@ -20,6 +20,7 @@
 * { box-sizing: border-box; }
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 12px);
   -webkit-text-size-adjust: 100%;
 }
 html, body {
@@ -55,16 +56,15 @@ input, select, textarea {
   -webkit-appearance: none;
 }
 select {
-  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: right 14px calc(50% - 3px), right 19px calc(50% - 3px);
-  background-size: 6px 6px, 6px 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%238fa0b3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1.5 1.8L6 6.2l4.5-4.4'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  padding-right: 28px;
+  background-position: right 12px center;
+  background-size: 12px 8px;
+  padding-right: 34px;
 }
 html[dir="rtl"] select {
-  background-position: left 14px calc(50% - 3px), left 19px calc(50% - 3px);
-  padding-left: 28px;
+  background-position: left 12px center;
+  padding-left: 34px;
   padding-right: 12px;
 }
 textarea { min-height: 96px; resize: vertical; }
@@ -125,11 +125,10 @@ button.linkish {
   max-width: 1180px;
   margin: 0 auto;
   padding: 10px 20px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  justify-content: space-between;
-  min-height: var(--header-h);
 }
 .brand {
   display: flex;
@@ -154,7 +153,20 @@ button.linkish {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+}
+.nav {
+  justify-content: center;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.top-actions { flex-wrap: wrap; justify-content: flex-end; }
+.top-actions a {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
 }
 .nav a {
   color: var(--muted);
@@ -182,7 +194,7 @@ button.linkish {
 }
 .page-head h2 { margin: 0; font-size: 22px; }
 .section {
-  scroll-margin-top: 84px;
+  scroll-margin-top: calc(var(--header-h) + 12px);
   margin-bottom: 18px;
 }
 .card {
@@ -333,6 +345,12 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 4px;
+  padding-inline-end: 12px;
+  scrollbar-width: thin;
+}
+.tabs::after, .nav::after {
+  content: "";
+  flex: 0 0 8px;
 }
 button.tab {
   background: var(--panel-2);
@@ -365,8 +383,21 @@ pre.capsule, pre.health-json {
 
 @media (max-width: 960px) {
   .stat-grid, .grid-2 { grid-template-columns: 1fr 1fr; }
-  .nav { width: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
-  .topbar-inner { flex-wrap: wrap; }
+  .topbar-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand actions"
+      "nav nav";
+    padding: 10px 12px 6px;
+  }
+  .brand { grid-area: brand; }
+  .top-actions { grid-area: actions; }
+  .nav {
+    grid-area: nav;
+    justify-content: flex-start;
+    width: 100%;
+    padding-bottom: 6px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -381,7 +412,6 @@ pre.capsule, pre.health-json {
 @media (max-width: 480px) {
   .brand h1 { font-size: 15px; }
   .card { padding: 14px; }
-  .topbar-inner { padding: 10px 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

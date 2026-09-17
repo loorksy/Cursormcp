@@ -322,14 +322,23 @@ async function copyField(id, label) {
 document.getElementById("copy-webhook-url").addEventListener("click", () => copyField("tg-webhook-url", "الرابط"));
 document.getElementById("copy-webhook-secret").addEventListener("click", () => copyField("tg-webhook-secret", "السر"));
 
+function syncHeaderOffset() {
+  const bar = document.querySelector(".topbar");
+  if (!bar) return;
+  const h = Math.ceil(bar.getBoundingClientRect().height);
+  document.documentElement.style.setProperty("--header-h", h + "px");
+}
+
 function setupSectionNav() {
   const links = [...document.querySelectorAll(".nav a[href^='#']")];
   const sections = links.map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
   if (!sections.length) return;
   const sync = () => {
+    syncHeaderOffset();
+    const offset = (document.querySelector(".topbar")?.getBoundingClientRect().height || 64) + 16;
     let current = sections[0];
     for (const sec of sections) {
-      if (sec.getBoundingClientRect().top <= 110) current = sec;
+      if (sec.getBoundingClientRect().top <= offset) current = sec;
     }
     for (const a of links) {
       const on = a.getAttribute("href") === "#" + current.id;
@@ -339,6 +348,7 @@ function setupSectionNav() {
     }
   };
   window.addEventListener("scroll", sync, { passive: true });
+  window.addEventListener("resize", syncHeaderOffset);
   sync();
 }
 
