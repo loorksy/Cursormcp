@@ -214,7 +214,8 @@ async function loadTelegram() {
   document.getElementById("tg-token-mask").textContent = data.botTokenMasked || "غير مضبوط";
   document.getElementById("tg-chat-mask").textContent = data.chatIdMasked || "غير مضبوط";
   document.getElementById("tg-enabled").checked = Boolean(data.enabled);
-  document.getElementById("tg-webhook").textContent = "رابط webhook: " + data.webhookUrl;
+  document.getElementById("tg-webhook-url").value = data.webhookUrl || "";
+  document.getElementById("tg-webhook-secret").value = data.webhookSecret || "";
   const body = document.getElementById("tg-log");
   body.innerHTML = "";
   if (!data.recent?.length) {
@@ -267,5 +268,30 @@ document.getElementById("tg-test").addEventListener("click", async () => {
     msg.textContent = err.message;
   }
 });
+
+async function copyField(id, label) {
+  const input = document.getElementById(id);
+  const value = input.value;
+  const status = document.getElementById("tg-copy-status");
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      input.focus();
+      input.select();
+      document.execCommand("copy");
+    }
+    status.className = "ok";
+    status.textContent = "تم نسخ " + label + ".";
+  } catch {
+    input.focus();
+    input.select();
+    status.className = "flash";
+    status.textContent = "تعذر النسخ تلقائيًا. حدّد الحقل وانسخ يدويًا.";
+  }
+}
+
+document.getElementById("copy-webhook-url").addEventListener("click", () => copyField("tg-webhook-url", "الرابط"));
+document.getElementById("copy-webhook-secret").addEventListener("click", () => copyField("tg-webhook-secret", "السر"));
 
 Promise.all([loadMe(), loadHealth(), loadSettings(), loadReposAndModels(), loadAgents(), loadTelegram()]).catch(() => {});

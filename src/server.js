@@ -334,6 +334,7 @@ app.get("/api/telegram", (req, res) => {
     chatIdConfigured: Boolean(chatId),
     chatIdMasked: chatId ? maskSecret(chatId) : "",
     webhookUrl: "https://mcp.lork.cloud/webhooks/cursor-agent",
+    webhookSecret: (process.env.CURSOR_WEBHOOK_SECRET || "").trim(),
     recent: listTelegramNotifyLog(20),
   });
 });
