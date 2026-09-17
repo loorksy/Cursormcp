@@ -28,6 +28,12 @@ Webhook إشعارات Cursor: `https://mcp.lork.cloud/webhooks/cursor-agent`
 
 زر **إطلاق** في اللوحة (وأداة MCP `create_agent`) يرفق هذا الرابط و`CURSOR_WEBHOOK_SECRET` تلقائيًا عبر Cloud Agents API v0. لا حاجة للصقهما في إعدادات Cursor.com.
 
+## الذاكرة المركزية والحوكمة
+
+دليل عام (بلا بيانات مشاريع): `GET https://mcp.lork.cloud/system-guide`
+
+أدوات MCP إضافية للمشاريع/المهام/القواعد. الإنجاز المعتمد (`done_verified`) وقبول القواعد يتمان فقط من لوحة التحكم.
+
 ## التشغيل المحلي
 
 ```bash

@@ -13,6 +13,8 @@ import {
   listRepositories,
 } from "./cursor-api.js";
 import { getSetting, log, logRequest } from "./lib.js";
+import { registerMemoryMcpTools } from "./memory-mcp.js";
+import { resolveActorFromRequest, runWithActor } from "./memory.js";
 
 const transports = new Map();
 
@@ -198,6 +200,8 @@ export function createBridgeMcpServer() {
     },
   );
 
+  registerMemoryMcpTools(server);
+
   return server;
 }
 
@@ -206,6 +210,10 @@ export function mcpSessionCount() {
 }
 
 export async function handleMcpPost(req, res) {
+  return runWithActor(resolveActorFromRequest(req), () => handleMcpPostInner(req, res));
+}
+
+async function handleMcpPostInner(req, res) {
   const sessionId = req.headers["mcp-session-id"];
   try {
     if (sessionId && transports.has(sessionId)) {
@@ -247,6 +255,10 @@ export async function handleMcpPost(req, res) {
 }
 
 export async function handleMcpSession(req, res) {
+  return runWithActor(resolveActorFromRequest(req), () => handleMcpSessionInner(req, res));
+}
+
+async function handleMcpSessionInner(req, res) {
   const sessionId = req.headers["mcp-session-id"];
   if (!sessionId || !transports.has(sessionId)) {
     res.status(400).send("Invalid or missing session ID");

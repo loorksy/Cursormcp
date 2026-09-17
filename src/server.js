@@ -39,10 +39,31 @@ import { handleMcpPost, handleMcpSession, mcpSessionCount } from "./mcp.js";
 import { mountOAuth } from "./oauth.js";
 import { sendTelegramMessage } from "./telegram-notify.js";
 import { handleCursorWebhook, listTelegramNotifyLog, getCursorWebhookUrl, getCursorWebhookSecret } from "./webhook.js";
+import {
+  MemoryError,
+  acceptRuleSuggestion,
+  confirmTask,
+  createProject,
+  ensureMemoryTables,
+  getProjectCapsule,
+  getProjectFull,
+  listProjects,
+  rejectRuleSuggestion,
+  rejectTask,
+  requestTaskFix,
+  runWithActor,
+  seedMemory,
+  systemGuideText,
+  verifyPlanPrompt,
+  verifyUiUx,
+  verifyUxNote,
+} from "./memory.js";
 
 loadEnvFile();
 ensureDirs();
 seedDefaultSettings();
+ensureMemoryTables();
+seedMemory();
 
 const startedAt = Date.now();
 const PORT = Number(process.env.PORT || 18800);
@@ -67,7 +88,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
-    if (req.path === "/health" && req.method === "GET") return;
+    if ((req.path === "/health" || req.path === "/system-guide") && req.method === "GET") return;
     log("info", "http", {
       method: req.method,
       path: req.path,
@@ -129,6 +150,14 @@ app.get("/health", (req, res) => {
   res.json(publicHealth());
 });
 
+app.get("/system-guide", (req, res) => {
+  const text = systemGuideText();
+  if ((req.headers.accept || "").includes("application/json")) {
+    return res.json({ text });
+  }
+  res.type("text/plain; charset=utf-8").send(text);
+});
+
 app.get("/login", (req, res) => {
   if (validSession(sessionIdFrom(req))) return res.redirect("/");
   res.sendFile(paths.public + "/login.html");
@@ -179,6 +208,9 @@ app.use("/api", requireAuth);
 function handleApiError(res, err) {
   if (err.code === "NO_API_KEY") {
     return res.status(400).json({ error: "CURSOR_AGENTS_API_KEY is not set. Add it from Settings." });
+  }
+  if (err instanceof MemoryError) {
+    return res.status(err.status || 400).json({ error: err.message });
   }
   if (err instanceof CursorApiError) {
     const detail = cursorErrorMessage(err);
@@ -400,6 +432,99 @@ app.get("/api/cursor-me", async (req, res) => {
     handleApiError(res, err);
   }
 });
+
+function memoryApi(fn) {
+  return (req, res) => {
+    Promise.resolve(runWithActor("user", () => fn(req, res))).catch((err) => {
+      if (res.headersSent) return;
+      handleApiError(res, err);
+    });
+  };
+}
+
+app.get(
+  "/api/memory/projects",
+  memoryApi(async (_req, res) => {
+    res.json({ items: listProjects() });
+  }),
+);
+
+app.post(
+  "/api/memory/projects",
+  memoryApi(async (req, res) => {
+    res.json(createProject(req.body || {}));
+  }),
+);
+
+app.get(
+  "/api/memory/projects/:id",
+  memoryApi(async (req, res) => {
+    res.json(getProjectFull(Number(req.params.id)));
+  }),
+);
+
+app.get(
+  "/api/memory/projects/:id/capsule",
+  memoryApi(async (req, res) => {
+    res.json(getProjectCapsule(Number(req.params.id)));
+  }),
+);
+
+app.post(
+  "/api/memory/tasks/:id/confirm",
+  memoryApi(async (req, res) => {
+    res.json(confirmTask(Number(req.params.id)));
+  }),
+);
+
+app.post(
+  "/api/memory/tasks/:id/reject",
+  memoryApi(async (req, res) => {
+    res.json(rejectTask(Number(req.params.id), req.body?.reason));
+  }),
+);
+
+app.post(
+  "/api/memory/tasks/:id/request-fix",
+  memoryApi(async (req, res) => {
+    res.json(await requestTaskFix(Number(req.params.id), req.body?.reason));
+  }),
+);
+
+app.post(
+  "/api/memory/rules-suggestions/:id/accept",
+  memoryApi(async (req, res) => {
+    res.json(acceptRuleSuggestion(Number(req.params.id)));
+  }),
+);
+
+app.post(
+  "/api/memory/rules-suggestions/:id/reject",
+  memoryApi(async (req, res) => {
+    res.json(rejectRuleSuggestion(Number(req.params.id), req.body?.reason));
+  }),
+);
+
+app.post(
+  "/api/memory/ui-ux/:id/verify",
+  memoryApi(async (req, res) => {
+    res.json(verifyUiUx(Number(req.params.id)));
+  }),
+);
+
+app.post(
+  "/api/memory/ux-notes/:id/verify",
+  memoryApi(async (req, res) => {
+    res.json(verifyUxNote(Number(req.params.id)));
+  }),
+);
+
+app.post(
+  "/api/memory/plan-prompts/:id/verify",
+  memoryApi(async (req, res) => {
+    res.json(verifyPlanPrompt(Number(req.params.id)));
+  }),
+);
 
 app.get("/", requireAuth, (req, res) => {
   res.sendFile(paths.public + "/app.html");
