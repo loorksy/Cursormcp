@@ -209,4 +209,63 @@ document.getElementById("logout").addEventListener("click", async () => {
   location.href = "/login";
 });
 
-Promise.all([loadMe(), loadHealth(), loadSettings(), loadReposAndModels(), loadAgents()]).catch(() => {});
+async function loadTelegram() {
+  const data = await api("/api/telegram");
+  document.getElementById("tg-token-mask").textContent = data.botTokenMasked || "غير مضبوط";
+  document.getElementById("tg-chat-mask").textContent = data.chatIdMasked || "غير مضبوط";
+  document.getElementById("tg-enabled").checked = Boolean(data.enabled);
+  document.getElementById("tg-webhook").textContent = "رابط webhook: " + data.webhookUrl;
+  const body = document.getElementById("tg-log");
+  body.innerHTML = "";
+  if (!data.recent?.length) {
+    body.append(el("tr", {}, [el("td", { colSpan: 4, textContent: "لا إشعارات بعد." })]));
+    return;
+  }
+  for (const row of data.recent) {
+    body.append(
+      el("tr", {}, [
+        el("td", { textContent: row.ts || "" }),
+        el("td", { textContent: row.agent_id || "" }),
+        el("td", { textContent: row.status || "" }),
+        el("td", { textContent: row.sent ? "نعم" : "لا" }),
+      ]),
+    );
+  }
+}
+
+document.getElementById("tg-save").addEventListener("click", async () => {
+  const msg = document.getElementById("tg-msg");
+  msg.textContent = "";
+  try {
+    const body = { enabled: document.getElementById("tg-enabled").checked };
+    const token = document.getElementById("tg-token").value.trim();
+    const chatId = document.getElementById("tg-chat").value.trim();
+    if (token) body.botToken = token;
+    if (chatId) body.chatId = chatId;
+    const data = await api("/api/telegram", { method: "PUT", body: JSON.stringify(body) });
+    document.getElementById("tg-token").value = "";
+    document.getElementById("tg-chat").value = "";
+    document.getElementById("tg-token-mask").textContent = data.botTokenMasked || "غير مضبوط";
+    msg.className = "ok";
+    msg.textContent = "تم الحفظ.";
+    await loadTelegram();
+  } catch (err) {
+    msg.className = "flash";
+    msg.textContent = err.message;
+  }
+});
+
+document.getElementById("tg-test").addEventListener("click", async () => {
+  const msg = document.getElementById("tg-msg");
+  msg.textContent = "";
+  try {
+    await api("/api/telegram/test", { method: "POST", body: "{}" });
+    msg.className = "ok";
+    msg.textContent = "تم إرسال رسالة الاختبار.";
+  } catch (err) {
+    msg.className = "flash";
+    msg.textContent = err.message;
+  }
+});
+
+Promise.all([loadMe(), loadHealth(), loadSettings(), loadReposAndModels(), loadAgents(), loadTelegram()]).catch(() => {});

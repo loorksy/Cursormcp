@@ -68,6 +68,41 @@
     </div>
 
     <div class="card">
+      <h2>إشعارات تيليجرام</h2>
+      <p class="muted">إشعار فقط عند انتهاء أو فشل agent عبر webhook. لا تنفيذ تلقائي.</p>
+      <p>التوكن الحالي: <strong id="tg-token-mask">غير مضبوط</strong></p>
+      <p>Chat ID الحالي: <strong id="tg-chat-mask">غير مضبوط</strong></p>
+      <label for="tg-token">TELEGRAM_BOT_TOKEN</label>
+      <input id="tg-token" type="password" autocomplete="off" placeholder="123456:ABC..." />
+      <label for="tg-chat">TELEGRAM_CHAT_ID</label>
+      <input id="tg-chat" autocomplete="off" placeholder="-100..." />
+      <p class="row">
+        <label for="tg-enabled" style="margin:0">تفعيل الإشعارات</label>
+        <input id="tg-enabled" type="checkbox" style="width:auto" />
+      </p>
+      <p class="row">
+        <button id="tg-save">حفظ تيليجرام</button>
+        <button class="secondary" id="tg-test">اختبار الإشعار</button>
+      </p>
+      <p class="flash" id="tg-msg"></p>
+      <p class="muted" id="tg-webhook"></p>
+      <h2>آخر الإشعارات</h2>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>الوقت</th>
+              <th>Agent</th>
+              <th>الحالة</th>
+              <th>أُرسل</th>
+            </tr>
+          </thead>
+          <tbody id="tg-log"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>إعدادات قابلة للتوسعة</h2>
       <p class="muted">أي مفتاح/قيمة يُحفظ في SQLite ويُستخدم لاحقًا دون تعديل الكود.</p>
       <div id="settings"></div>

@@ -32,9 +32,12 @@ import {
   verifyPassword,
   ensureDirs,
   safeJson,
+  updateDotEnv,
 } from "./lib.js";
 import { handleMcpPost, handleMcpSession, mcpSessionCount } from "./mcp.js";
 import { mountOAuth } from "./oauth.js";
+import { sendTelegramMessage } from "./telegram-notify.js";
+import { handleCursorWebhook, listTelegramNotifyLog } from "./webhook.js";
 
 loadEnvFile();
 ensureDirs();
@@ -48,6 +51,15 @@ const COOKIE = "bridge_sid";
 const app = express();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
+
+app.post(
+  "/webhooks/cursor-agent",
+  express.raw({ type: "*/*", limit: "1mb" }),
+  (req, res, next) => {
+    handleCursorWebhook(req, res).catch(next);
+  },
+);
+
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -200,7 +212,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/api/settings", (req, res) => {
-  const hidden = new Set(["cursor_api_key_enc"]);
+  const hidden = new Set(["cursor_api_key_enc", "telegram_notify_enabled"]);
   const items = listSettings()
     .filter((row) => !hidden.has(row.key))
     .map((row) => ({ key: row.key, value: row.value, updatedAt: row.updated_at }));
@@ -218,7 +230,7 @@ app.put("/api/settings", (req, res) => {
   if (!Array.isArray(entries)) {
     return res.status(400).json({ error: "settings array required" });
   }
-  const blocked = new Set(["cursor_api_key_enc"]);
+  const blocked = new Set(["cursor_api_key_enc", "telegram_notify_enabled"]);
   for (const entry of entries) {
     if (!entry?.key || blocked.has(entry.key)) continue;
     if (!/^[a-z0-9_]+$/.test(entry.key)) continue;
@@ -309,6 +321,61 @@ app.get("/api/models", async (req, res) => {
     res.json(await listModels());
   } catch (err) {
     handleApiError(res, err);
+  }
+});
+
+app.get("/api/telegram", (req, res) => {
+  const token = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
+  const chatId = (process.env.TELEGRAM_CHAT_ID || "").trim();
+  res.json({
+    enabled: getSetting("telegram_notify_enabled", "true") !== "false",
+    botTokenConfigured: Boolean(token),
+    botTokenMasked: token ? maskSecret(token) : "",
+    chatIdConfigured: Boolean(chatId),
+    chatIdMasked: chatId ? maskSecret(chatId) : "",
+    webhookUrl: "https://mcp.lork.cloud/webhooks/cursor-agent",
+    recent: listTelegramNotifyLog(20),
+  });
+});
+
+app.put("/api/telegram", (req, res) => {
+  const updates = {};
+  if (typeof req.body?.botToken === "string" && req.body.botToken.trim()) {
+    updates.TELEGRAM_BOT_TOKEN = req.body.botToken.trim();
+  }
+  if (typeof req.body?.chatId === "string" && req.body.chatId.trim()) {
+    updates.TELEGRAM_CHAT_ID = req.body.chatId.trim();
+  }
+  if (typeof req.body?.enabled === "boolean") {
+    setSetting("telegram_notify_enabled", req.body.enabled ? "true" : "false");
+  }
+  if (Object.keys(updates).length) updateDotEnv(updates);
+  const token = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
+  res.json({
+    ok: true,
+    botTokenMasked: token ? maskSecret(token) : "",
+    enabled: getSetting("telegram_notify_enabled", "true") !== "false",
+  });
+});
+
+app.post("/api/telegram/test", async (req, res) => {
+  const token = (process.env.TELEGRAM_BOT_TOKEN || "").trim();
+  const chatId = (process.env.TELEGRAM_CHAT_ID || "").trim();
+  if (!token || !chatId) {
+    return res.status(400).json({ error: "التوكن غير مُعد بعد" });
+  }
+  if (getSetting("telegram_notify_enabled", "true") === "false") {
+    return res.status(400).json({ error: "إشعارات تيليجرام معطّلة" });
+  }
+  try {
+    await sendTelegramMessage(
+      token,
+      chatId,
+      "رسالة اختبار من MCP Cursor Bridge — الربط يعمل.",
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(502).json({ error: "تعذر إرسال رسالة تيليجرام. تحقق من التوكن وChat ID." });
   }
 });
 

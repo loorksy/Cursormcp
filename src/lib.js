@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -172,6 +172,7 @@ export function seedDefaultSettings() {
     default_ref: "main",
     auto_create_pr: "false",
     mcp_require_token: "true",
+    telegram_notify_enabled: "true",
   };
   for (const [key, value] of Object.entries(defaults)) {
     if (getSetting(key) === "") setSetting(key, value);
@@ -224,6 +225,22 @@ export function parseCookie(header, name) {
     if (part.startsWith(name + "=")) return part.slice(name.length + 1);
   }
   return "";
+}
+
+const ENV_KEY = /^[A-Z][A-Z0-9_]*$/;
+
+export function updateDotEnv(updates) {
+  const envPath = join(paths.root, ".env");
+  let text = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
+  for (const [key, value] of Object.entries(updates)) {
+    if (!ENV_KEY.test(key)) continue;
+    const serialized = `${key}=${String(value ?? "")}`;
+    const re = new RegExp(`^${key}=.*$`, "m");
+    if (re.test(text)) text = text.replace(re, serialized);
+    else text = text.replace(/\s*$/, "\n") + serialized + "\n";
+    process.env[key] = String(value ?? "");
+  }
+  writeFileSync(envPath, text, { mode: 0o600 });
 }
 
 export function safeJson(value, fallback) {

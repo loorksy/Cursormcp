@@ -24,6 +24,8 @@
 
 للعملاء اليدويين: `Authorization: Bearer <MCP_AUTH_TOKEN>`
 
+Webhook إشعارات Cursor: `https://mcp.lork.cloud/webhooks/cursor-agent`
+
 ## التشغيل المحلي
 
 ```bash
