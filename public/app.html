@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة التحكم — MCP Cursor Bridge</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="row" style="justify-content:space-between;margin-bottom:16px">
+      <div>
+        <h1>MCP Cursor Bridge</h1>
+        <div class="muted" id="who"></div>
+      </div>
+      <div class="row">
+        <a href="/health" class="muted">صفحة الصحة</a>
+        <button class="secondary" id="logout">خروج</button>
+      </div>
+    </div>
+
+    <div class="card" id="health-card">
+      <h2>صحة الجسر</h2>
+      <div id="health-summary" class="muted">...</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>مفتاح Cursor API</h2>
+        <p class="muted">يُخزَّن مشفّرًا على السيرفر. بعد الحفظ تظهر آخر 4 خانات فقط.</p>
+        <p>الحالي: <strong id="key-mask">غير مضبوط</strong></p>
+        <label for="api-key">مفتاح جديد</label>
+        <input id="api-key" type="password" autocomplete="off" placeholder="key_..." />
+        <p><button id="save-key">حفظ المفتاح</button></p>
+        <p class="flash" id="key-msg"></p>
+      </div>
+      <div class="card">
+        <h2>إطلاق Agent</h2>
+        <label for="repo">المستودع</label>
+        <select id="repo"></select>
+        <label for="prompt">التعليمات</label>
+        <textarea id="prompt" rows="5" placeholder="صف المهمة..."></textarea>
+        <label for="model">النموذج (اختياري)</label>
+        <select id="model"></select>
+        <p><button id="launch">إطلاق</button></p>
+        <p class="flash" id="launch-msg"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>الـ Agents</h2>
+        <button class="secondary" id="refresh">تحديث</button>
+      </div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>الحالة</th>
+              <th>الفرع / PR</th>
+              <th>متابعة</th>
+            </tr>
+          </thead>
+          <tbody id="agents"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>إشعارات تيليجرام</h2>
+      <p class="muted">إشعار فقط عند انتهاء أو فشل agent عبر webhook. لا تنفيذ تلقائي.</p>
+      <p>التوكن الحالي: <strong id="tg-token-mask">غير مضبوط</strong></p>
+      <p>Chat ID الحالي: <strong id="tg-chat-mask">غير مضبوط</strong></p>
+      <label for="tg-token">TELEGRAM_BOT_TOKEN</label>
+      <input id="tg-token" type="password" autocomplete="off" placeholder="123456:ABC..." />
+      <label for="tg-chat">TELEGRAM_CHAT_ID</label>
+      <input id="tg-chat" autocomplete="off" placeholder="-100..." />
+      <p class="row">
+        <label for="tg-enabled" style="margin:0">تفعيل الإشعارات</label>
+        <input id="tg-enabled" type="checkbox" style="width:auto" />
+      </p>
+      <p class="row">
+        <button id="tg-save">حفظ تيليجرام</button>
+        <button class="secondary" id="tg-test">اختبار الإشعار</button>
+      </p>
+      <p class="flash" id="tg-msg"></p>
+      <p class="muted" id="tg-webhook"></p>
+      <h2>آخر الإشعارات</h2>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>الوقت</th>
+              <th>Agent</th>
+              <th>الحالة</th>
+              <th>أُرسل</th>
+            </tr>
+          </thead>
+          <tbody id="tg-log"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>إعدادات قابلة للتوسعة</h2>
+      <p class="muted">أي مفتاح/قيمة يُحفظ في SQLite ويُستخدم لاحقًا دون تعديل الكود.</p>
+      <div id="settings"></div>
+      <div class="row">
+        <div class="grow">
+          <label>مفتاح جديد</label>
+          <input id="new-key" placeholder="feature_flag" />
+        </div>
+        <div class="grow">
+          <label>قيمة</label>
+          <input id="new-value" placeholder="on" />
+        </div>
+      </div>
+      <p><button class="secondary" id="save-settings">حفظ الإعدادات</button></p>
+      <p class="flash" id="settings-msg"></p>
+      <p class="muted" id="mcp-help"></p>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

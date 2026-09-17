@@ -1,0 +1,33 @@
+[Unit]
+Description=MCP Cursor Bridge (dashboard + MCP server)
+Documentation=https://mcp.lork.cloud
+After=network.target
+# Isolated unit — do not bind to nginx, docker, or pm2.
+
+[Service]
+Type=simple
+User=mcpbridge
+Group=mcpbridge
+WorkingDirectory=/opt/mcp-cursor-bridge
+EnvironmentFile=/opt/mcp-cursor-bridge/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/mcp-cursor-bridge/data /opt/mcp-cursor-bridge/logs /opt/mcp-cursor-bridge/.env
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+SyslogIdentifier=mcp-cursor-bridge
+
+[Install]
+WantedBy=multi-user.target

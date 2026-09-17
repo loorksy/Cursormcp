@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>صحة الخدمة — MCP Cursor Bridge</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>حالة MCP Cursor Bridge</h1>
+      <p class="muted">صفحة عامة لمراقبة أن الجسر يعمل.</p>
+      <pre id="out" class="muted">جاري التحميل…</pre>
+    </div>
+  </div>
+  <script>
+    fetch("/health", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((data) => {
+        document.getElementById("out").textContent = JSON.stringify(data, null, 2);
+      })
+      .catch((err) => {
+        document.getElementById("out").textContent = "فشل التحميل: " + err.message;
+      });
+  </script>
+</body>
+</html>
