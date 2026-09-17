@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { loadConfig } from "./config.js";
 import { log } from "./lib.js";
 import { telegramService } from "./telegram-service.js";
-import { getAgentRecord, listRunRecords } from "./agents-store.js";
+import { getAgentRecord } from "./agents-store.js";
 import { listTransitions } from "./state-machine.js";
 import { createRun } from "./cursor-api.js";
 import { stopTrackedAgent } from "./orchestrator.js";
@@ -84,7 +84,6 @@ export async function handleTelegramWebhook(req, res) {
   }
 
   if (message?.text === "/status") {
-    const recs = listRunRecords;
     await telegramService.send_message(fromChat, "Use the dashboard at the public URL for live status.");
   }
   return res.status(200).json({ ok: true });

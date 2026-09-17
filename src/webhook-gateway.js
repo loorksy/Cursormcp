@@ -73,8 +73,10 @@ export async function handleWebhookGateway(req, res, adapter = cursorV0Adapter()
     inserted: ingested.inserted,
     source: parsed.source,
   });
-  setImmediate(() => {
-    drainEvents().catch((err) => log("error", "webhook_drain", { error: err.message }));
-  });
+  if (process.env.BRIDGE_TEST !== "true") {
+    setImmediate(() => {
+      drainEvents().catch((err) => log("error", "webhook_drain", { error: err.message }));
+    });
+  }
   return res.status(200).json({ ok: true, duplicate: ingested.duplicate, event_id: ingested.event?.id });
 }
