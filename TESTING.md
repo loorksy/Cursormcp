@@ -19,7 +19,7 @@ There is no TypeScript. `npm run typecheck` is syntax `node --check` on the serv
 | `test/intel-redact.test.js` | secret redaction, 10k pagination, traversal |
 | `test/intel-local-git.test.js` | real git tree/read/search/diff/blame + mocked GitHub PR/CI/e2e |
 | `test/intel-perf.test.js` | 120-file git tree pagination |
-| `test/intel-mcp-tools.test.js` | intel tool names registered |
+| `test/intel-filesystem.test.js` | non-git mapped checkout vs empty GitHub `main` |
 
 Live Cursor create is **not** invoked by CI. Live GitHub uses `GITHUB_TOKEN` when present; unit tests mock `GITHUB_API_BASE_URL`.
 

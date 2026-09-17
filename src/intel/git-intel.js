@@ -25,11 +25,26 @@ function refs(ctx, extra = {}) {
   return { repository: ctx.repository, commit: ctx.commit.sha, ref: ctx.ref, ...extra };
 }
 
+function githubSha(ctx, fallback) {
+  if (ctx.useFilesystem || ctx.commit?.sha === "worktree") return fallback;
+  return ctx.commit.sha;
+}
+
 export async function gitStatusIntel(args) {
   const ctx = await openRef(args.repository, args.ref);
   if (ctx.useLocal) {
     const items = await gitStatus(ctx.local);
     return { source: "local_worktree", repository: ctx.repository, commit: ctx.commit.sha, items, references: refs(ctx) };
+  }
+  if (ctx.useFilesystem) {
+    return {
+      source: "filesystem",
+      note: "mapped checkout is not a git repository; porcelain status is unavailable",
+      repository: ctx.repository,
+      commit: ctx.commit.sha,
+      items: [],
+      references: refs(ctx),
+    };
   }
   const meta = await getRepository(ctx.owner, ctx.repo);
   const base = args.base || meta.default_branch || "main";
@@ -64,7 +79,7 @@ export async function gitCommitsIntel(args) {
     return { source: "local", repository: ctx.repository, items, references: refs(ctx) };
   }
   const items = await listCommits(ctx.owner, ctx.repo, {
-    sha: args.ref || ctx.commit.sha,
+    sha: args.ref || githubSha(ctx, undefined),
     path: args.path,
     limit: args.limit || 30,
   });
@@ -73,14 +88,14 @@ export async function gitCommitsIntel(args) {
 
 export async function gitCommitGetIntel(args) {
   const ctx = await openRef(args.repository, args.sha || args.ref);
-  const data = await getCommit(ctx.owner, ctx.repo, args.sha || ctx.commit.sha);
+  const data = await getCommit(ctx.owner, ctx.repo, args.sha || githubSha(ctx, args.ref) || "HEAD");
   return { ...data, repository: ctx.repository, references: refs(ctx, { commit: data.sha }) };
 }
 
 export async function gitDiffIntel(args) {
   const ctx = await openRef(args.repository, args.head || args.ref);
   const base = args.base;
-  const head = args.head || ctx.commit.sha;
+  const head = args.head || githubSha(ctx, args.ref);
   if (!base) throw new IntelError("INVALID_INPUT", "base is required for git_diff");
   let text;
   if (ctx.useLocal) {
@@ -109,7 +124,7 @@ export async function gitDiffBetweenIntel(args) {
 export async function gitChangedFilesIntel(args) {
   const ctx = await openRef(args.repository, args.head || args.ref);
   const base = args.base;
-  const head = args.head || ctx.commit.sha;
+  const head = args.head || githubSha(ctx, args.ref);
   if (!base) throw new IntelError("INVALID_INPUT", "base is required");
   let files;
   if (ctx.useLocal) {
@@ -142,6 +157,17 @@ export async function gitFileHistoryIntel(args) {
 export async function gitBlameIntel(args) {
   const ctx = await openRef(args.repository, args.ref);
   if (!args.path) throw new IntelError("INVALID_INPUT", "path is required");
+  if (ctx.useFilesystem) {
+    return {
+      source: "filesystem",
+      note: "mapped checkout is not a git repository; blame requires a git worktree or a pinned commit SHA",
+      repository: ctx.repository,
+      path: args.path,
+      commit: ctx.commit.sha,
+      ranges: [],
+      references: refs(ctx, { path: args.path }),
+    };
+  }
   if (ctx.useLocal) {
     const ranges = await gitBlame(ctx.local, ctx.commit.sha, args.path);
     return {

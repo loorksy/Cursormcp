@@ -10,7 +10,7 @@ Phase 0: `AUDIT_REPOSITORY_INTELLIGENCE.md` committed before implementation.
 
 | Feature | Implemented | Integrated | Tested | Verified |
 | --- | --- | --- | --- | --- |
-| Repo tree / dir / read / batch / glob / metadata | yes | MCP | yes | local git |
+| Repo tree / dir / read / batch / glob / metadata | yes | MCP | yes | local git + filesystem checkout |
 | Search (GitHub + tree scan) | yes | MCP | yes | tree scan (search API 403 path) |
 | Context engine ignore/binary/languages | yes | snapshot | yes | |
 | Secret redaction | yes | read/diff/MCP | yes | |
@@ -38,7 +38,7 @@ See `INTEL_TOOL_NAMES` in `src/intel-mcp.js` (32 tools: repo_*, git_*, github_*,
 ## Tests executed
 
 ```
-npm test   → 31 passed, 0 failed (node:test, process isolation)
+npm test   → 37 passed, 0 failed (node:test, process isolation)
 npm run lint → node --check on all src/*.js
 ```
 
@@ -52,7 +52,8 @@ Live GitHub `GET /repos/loorksy/Cursormcp` succeeded (`private: false`, default 
 4. No automatic git clone of arbitrary repos.
 5. Cursor API is not a source-code host.
 6. If `GITHUB_ALLOWED_REPOS` is unset in production, allowlist is projects + Cursor-listed repos + local origin — still not the open internet.
+7. Mapped non-git checkouts (`INTEL_LOCAL_REPOS`) are read as `source: filesystem` so a stale/empty GitHub `main` cannot hide deployed files. Pin a commit SHA to read GitHub instead.
 
 ## Deployment
 
-Same systemd unit. Set `GITHUB_TOKEN` to read private GitHub data. Optional `INTEL_LOCAL_ROOT=/opt/mcp-cursor-bridge` only if that checkout should be readable as the mapped origin. No new ports, no Docker on the locked-down VPS.
+Same systemd unit. Set `GITHUB_TOKEN` to read private GitHub data. For a deploy tree that is not a git clone, set `INTEL_LOCAL_REPOS=owner/repo:/opt/mcp-cursor-bridge` (and optional `INTEL_LOCAL_ROOT` of the same path). No new ports, no Docker on the locked-down VPS.

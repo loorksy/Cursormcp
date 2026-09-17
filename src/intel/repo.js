@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 import { loadConfig } from "../config.js";
 import { IntelError } from "./errors.js";
 import { localRootFor } from "./allowlist.js";
@@ -29,10 +32,24 @@ import {
   encodeCursor,
 } from "./paginate.js";
 
+function isPinnedSha(ref) {
+  return typeof ref === "string" && /^[0-9a-f]{7,40}$/i.test(ref.trim());
+}
+
+function containedAbs(root, rel) {
+  const base = resolve(root);
+  const abs = resolve(base, rel);
+  if (abs !== base && !abs.startsWith(base + sep)) {
+    throw new IntelError("PATH_TRAVERSAL", "path traversal rejected", { path: rel });
+  }
+  return abs;
+}
+
 export async function openRef(repository, ref) {
   const { owner, repo } = await resolveRepo(repository);
   const local = await localRootFor(owner, repo);
   const useLocal = Boolean(local && (await gitOk(local).catch(() => false)));
+  const useFilesystem = Boolean(local && existsSync(local) && !useLocal && !isPinnedSha(ref));
   let commit;
   if (useLocal) {
     try {
@@ -42,17 +59,65 @@ export async function openRef(repository, ref) {
       commit = await resolveCommit(owner, repo, ref);
       commit.source = "github";
     }
+  } else if (useFilesystem) {
+    commit = { sha: "worktree", ref: ref || "worktree", source: "filesystem" };
   } else {
     commit = await resolveCommit(owner, repo, ref);
     commit.source = "github";
   }
-  return { owner, repo, repository: `${owner}/${repo}`, local, useLocal, commit, ref: commit.ref || ref || commit.sha };
+  return {
+    owner,
+    repo,
+    repository: `${owner}/${repo}`,
+    local,
+    useLocal,
+    useFilesystem,
+    commit,
+    ref: commit.ref || ref || commit.sha,
+  };
+}
+
+async function walkFilesystem(root, prefix = "", state = { n: 0, truncated: false, cap: 2000 }) {
+  if (state.n >= state.cap) {
+    state.truncated = true;
+    return [];
+  }
+  const entries = await readdir(join(root, prefix), { withFileTypes: true });
+  const out = [];
+  for (const e of entries) {
+    if (state.n >= state.cap) {
+      state.truncated = true;
+      break;
+    }
+    if (e.isSymbolicLink() || e.name === ".git" || looksGeneratedPath(e.name)) continue;
+    const rel = prefix ? `${prefix}/${e.name}` : e.name;
+    if (looksGeneratedPath(rel)) continue;
+    if (e.isDirectory()) {
+      state.n += 1;
+      out.push({ path: rel, type: "tree", size: 0, sha: "" });
+      out.push(...(await walkFilesystem(root, rel, state)));
+    } else if (e.isFile()) {
+      state.n += 1;
+      const s = await stat(join(root, rel));
+      out.push({ path: rel, type: "blob", size: s.size, sha: "" });
+    }
+  }
+  return out;
 }
 
 async function loadTree(ctx, { recursive = true, path = "" } = {}) {
   if (ctx.useLocal) {
     const tree = await gitLsTree(ctx.local, ctx.commit.sha, { recursive, path });
     return { sha: ctx.commit.sha, truncated: false, tree };
+  }
+  if (ctx.useFilesystem) {
+    const state = { n: 0, truncated: false, cap: Math.max(500, loadConfig().intelMaxTreeItems * 4) };
+    let tree = await walkFilesystem(ctx.local, "", state);
+    if (path) {
+      const prefix = path.replace(/\/$/, "");
+      tree = tree.filter((e) => e.path === prefix || e.path.startsWith(prefix + "/"));
+    }
+    return { sha: "worktree", truncated: state.truncated, tree };
   }
   const data = await getTree(ctx.owner, ctx.repo, ctx.commit.sha, { recursive });
   if (path) {
@@ -110,6 +175,21 @@ async function readRaw(ctx, path) {
   const rel = safeRelPath(path);
   if (ctx.useLocal) {
     const buf = await gitShowFile(ctx.local, ctx.commit.sha, rel);
+    return { buf, binary: isProbablyBinary(rel, buf), text: buf.toString("utf8") };
+  }
+  if (ctx.useFilesystem) {
+    const abs = containedAbs(ctx.local, rel);
+    if (!existsSync(abs)) {
+      throw new IntelError("FILE_NOT_FOUND", "file not found", { repository: ctx.repository, path: rel });
+    }
+    const st = await stat(abs);
+    if (st.isDirectory()) {
+      throw new IntelError("IS_DIRECTORY", "path is a directory; use repo_directory_list", {
+        repository: ctx.repository,
+        path: rel,
+      });
+    }
+    const buf = await readFile(abs);
     return { buf, binary: isProbablyBinary(rel, buf), text: buf.toString("utf8") };
   }
   let data;
@@ -186,6 +266,7 @@ export async function repoTree(args) {
     repository: ctx.repository,
     ref: ctx.ref,
     commit: ctx.commit.sha,
+    source: ctx.commit.source,
     truncated_upstream: data.truncated,
     ...page,
     items: page.items.map((e) => ({
@@ -223,6 +304,7 @@ export async function repoFileRead(args) {
       repository: ctx.repository,
       ref: ctx.ref,
       commit: ctx.commit.sha,
+      source: ctx.commit.source,
       language: languageOf(path),
       size: raw.buf.length,
       binary: true,
@@ -244,6 +326,7 @@ export async function repoFileRead(args) {
     repository: ctx.repository,
     ref: ctx.ref,
     commit: ctx.commit.sha,
+    source: ctx.commit.source,
     language: languageOf(path),
     size: raw.buf.length,
     binary: false,

@@ -5,8 +5,9 @@ The MCP server can read **real** Git repositories and GitHub data. It does not s
 ## Sources of truth
 
 1. **Local git** when `INTEL_LOCAL_REPOS=owner/repo:/absolute/path` or `INTEL_LOCAL_ROOT` whose `origin` is allowlisted.
-2. **GitHub REST** (and GraphQL blame) at `GITHUB_API_BASE_URL` (default `https://api.github.com`) using `GITHUB_TOKEN`.
-3. **Commit SHA** is resolved for every read. Cache keys are `repo|sha|kind`. A new SHA does not reuse another commit's tree.
+2. **Filesystem checkout** when that mapped path exists but is **not** a git repository (typical VPS deploy copy). `source` is `filesystem` and `commit` is `worktree`. Named refs such as `main` still read the files on disk. A 7–40 character commit SHA uses GitHub instead.
+3. **GitHub REST** (and GraphQL blame) at `GITHUB_API_BASE_URL` (default `https://api.github.com`) using `GITHUB_TOKEN`.
+4. **Commit SHA** is resolved for every git/GitHub read. Cache keys are `repo|sha|kind`. A new SHA does not reuse another commit's tree.
 
 ## Authorization
 
@@ -42,5 +43,6 @@ File bodies, diffs, and blame lines pass through redaction before MCP output. Ke
 - Cursor Cloud Agents API does **not** provide file trees. GitHub/local git does.
 - GitHub code search often returns 403; the tool then scans a bounded tree.
 - REST has **no blame**. `git_blame` uses local `git blame`, else GraphQL, else path history.
-- `git_status` without a local worktree is `compare(default_branch...ref)`, not porcelain status.
+- `git_status` without a local worktree is `compare(default_branch...ref)`, not porcelain status. A non-git mapped checkout returns `source: filesystem` and an empty status list.
 - Clone-on-demand is **not** enabled by default (no surprise git clones on the VPS).
+- A deploy directory without `.git` cannot blame or diff locally; those tools use GitHub (or return an explicit filesystem limitation).

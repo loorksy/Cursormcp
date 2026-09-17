@@ -19,7 +19,10 @@ export function localRepoMap() {
   const map = new Map();
   const cfg = loadConfig();
   for (const entry of cfg.intelLocalRepos) {
-    const [repo, root] = entry.split(":");
+    const idx = entry.indexOf(":");
+    if (idx < 1) continue;
+    const repo = entry.slice(0, idx);
+    const root = entry.slice(idx + 1);
     const parsed = parseOwnerRepo(repo);
     if (parsed && root) map.set(`${parsed.owner}/${parsed.repo}`.toLowerCase(), resolve(root));
   }
