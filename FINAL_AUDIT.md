@@ -10,7 +10,7 @@ Phase 0: `AUDIT_REPOSITORY_INTELLIGENCE.md` committed before implementation.
 
 | Feature | Implemented | Integrated | Tested | Verified |
 | --- | --- | --- | --- | --- |
-| Repo tree / dir / read / batch / glob / metadata | yes | MCP | yes | local git + filesystem checkout |
+| Repo tree / dir / read / batch / glob / metadata | yes | MCP | yes | local git + live VPS filesystem |
 | Search (GitHub + tree scan) | yes | MCP | yes | tree scan (search API 403 path) |
 | Context engine ignore/binary/languages | yes | snapshot | yes | |
 | Secret redaction | yes | read/diff/MCP | yes | |
@@ -43,6 +43,8 @@ npm run lint → node --check on all src/*.js
 ```
 
 Live GitHub `GET /repos/loorksy/Cursormcp` succeeded (`private: false`, default `main`). Live intel against this checkout + GitHub token: tree includes `src/`, `repo_file_read` of `src/server.js`, search, commits, open PRs.
+
+Live VPS (`mcp-cursor-bridge` systemd, `/health` 200): mapped non-git checkout is `source: filesystem`. `repo_directory_list` on `src/` includes `intel-mcp.js`; `repo_file_read` of `src/intel-mcp.js` returns the tool list; search finds `registerIntelMcpTools`. GitHub `main` remains the empty initial commit and is not used for named refs.
 
 ## Known limitations
 
