@@ -163,7 +163,7 @@ document.getElementById("launch").addEventListener("click", async () => {
   const msg = document.getElementById("launch-msg");
   msg.textContent = "";
   try {
-    await api("/api/agents", {
+    const data = await api("/api/agents", {
       method: "POST",
       body: JSON.stringify({
         repository: document.getElementById("repo").value,
@@ -173,7 +173,9 @@ document.getElementById("launch").addEventListener("click", async () => {
     });
     document.getElementById("prompt").value = "";
     msg.className = "ok";
-    msg.textContent = "تم الإطلاق.";
+    msg.textContent = data.webhookAttached
+      ? "تم الإطلاق. سيُرسل إشعار تيليجرام عند الانتهاء أو الفشل."
+      : "تم الإطلاق.";
     await loadAgents();
   } catch (err) {
     msg.className = "flash";

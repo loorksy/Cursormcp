@@ -37,7 +37,7 @@ import {
 import { handleMcpPost, handleMcpSession, mcpSessionCount } from "./mcp.js";
 import { mountOAuth } from "./oauth.js";
 import { sendTelegramMessage } from "./telegram-notify.js";
-import { handleCursorWebhook, listTelegramNotifyLog } from "./webhook.js";
+import { handleCursorWebhook, listTelegramNotifyLog, getCursorWebhookUrl, getCursorWebhookSecret } from "./webhook.js";
 
 loadEnvFile();
 ensureDirs();
@@ -333,8 +333,8 @@ app.get("/api/telegram", (req, res) => {
     botTokenMasked: token ? maskSecret(token) : "",
     chatIdConfigured: Boolean(chatId),
     chatIdMasked: chatId ? maskSecret(chatId) : "",
-    webhookUrl: "https://mcp.lork.cloud/webhooks/cursor-agent",
-    webhookSecret: (process.env.CURSOR_WEBHOOK_SECRET || "").trim(),
+    webhookUrl: getCursorWebhookUrl(),
+    webhookSecret: getCursorWebhookSecret(),
     recent: listTelegramNotifyLog(20),
   });
 });

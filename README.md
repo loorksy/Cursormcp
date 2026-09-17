@@ -26,6 +26,8 @@
 
 Webhook إشعارات Cursor: `https://mcp.lork.cloud/webhooks/cursor-agent`
 
+زر **إطلاق** في اللوحة (وأداة MCP `create_agent`) يرفق هذا الرابط و`CURSOR_WEBHOOK_SECRET` تلقائيًا عبر Cloud Agents API v0. لا حاجة للصقهما في إعدادات Cursor.com.
+
 ## التشغيل المحلي
 
 ```bash
