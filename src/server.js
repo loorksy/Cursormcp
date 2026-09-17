@@ -5,6 +5,7 @@ import {
   createAgent,
   createRun,
   CursorApiError,
+  cursorErrorMessage,
   enrichAgent,
   getAgent,
   listAgents,
@@ -37,7 +38,7 @@ import {
 import { handleMcpPost, handleMcpSession, mcpSessionCount } from "./mcp.js";
 import { mountOAuth } from "./oauth.js";
 import { sendTelegramMessage } from "./telegram-notify.js";
-import { handleCursorWebhook, listTelegramNotifyLog } from "./webhook.js";
+import { handleCursorWebhook, listTelegramNotifyLog, getCursorWebhookUrl, getCursorWebhookSecret } from "./webhook.js";
 
 loadEnvFile();
 ensureDirs();
@@ -180,7 +181,11 @@ function handleApiError(res, err) {
     return res.status(400).json({ error: "CURSOR_AGENTS_API_KEY is not set. Add it from Settings." });
   }
   if (err instanceof CursorApiError) {
-    return res.status(err.status).json({ error: err.message, details: err.body });
+    const detail = cursorErrorMessage(err);
+    return res.status(err.status).json({
+      error: detail && detail !== err.message ? `${err.message}: ${detail}` : err.message,
+      details: err.body,
+    });
   }
   log("error", "api_error", { error: err.message });
   return res.status(500).json({ error: err.message });
@@ -333,8 +338,8 @@ app.get("/api/telegram", (req, res) => {
     botTokenMasked: token ? maskSecret(token) : "",
     chatIdConfigured: Boolean(chatId),
     chatIdMasked: chatId ? maskSecret(chatId) : "",
-    webhookUrl: "https://mcp.lork.cloud/webhooks/cursor-agent",
-    webhookSecret: (process.env.CURSOR_WEBHOOK_SECRET || "").trim(),
+    webhookUrl: getCursorWebhookUrl(),
+    webhookSecret: getCursorWebhookSecret(),
     recent: listTelegramNotifyLog(20),
   });
 });

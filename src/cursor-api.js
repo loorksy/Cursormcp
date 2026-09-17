@@ -1,4 +1,5 @@
 import { getSetting, decryptSecret, log } from "./lib.js";
+import { outboundWebhookConfig } from "./webhook.js";
 
 const API_BASE = "https://api.cursor.com";
 
@@ -22,7 +23,7 @@ export function apiKeyConfigured() {
   return Boolean(getApiKey());
 }
 
-function authHeaders() {
+function authHeaders(basic = false) {
   const key = getApiKey();
   if (!key) {
     const err = new Error("CURSOR_AGENTS_API_KEY is not configured");
@@ -30,12 +31,14 @@ function authHeaders() {
     throw err;
   }
   return {
-    Authorization: `Bearer ${key}`,
+    Authorization: basic
+      ? `Basic ${Buffer.from(`${key}:`, "utf8").toString("base64")}`
+      : `Bearer ${key}`,
     "Content-Type": "application/json",
   };
 }
 
-async function cursorFetch(method, path, { query, body, timeoutMs = 60000 } = {}) {
+async function cursorFetch(method, path, { query, body, timeoutMs = 60000, basic = false } = {}) {
   const url = new URL(path, API_BASE);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
@@ -48,7 +51,7 @@ async function cursorFetch(method, path, { query, body, timeoutMs = 60000 } = {}
   try {
     const res = await fetch(url, {
       method,
-      headers: authHeaders(),
+      headers: authHeaders(basic),
       body: body == null ? undefined : JSON.stringify(body),
       signal: controller.signal,
     });
@@ -66,6 +69,7 @@ async function cursorFetch(method, path, { query, body, timeoutMs = 60000 } = {}
       path,
       status: res.status,
       ms: Date.now() - started,
+      ...(res.ok ? {} : { error: json }),
     });
     if (!res.ok) throw new CursorApiError(res.status, json, path);
     return json;
@@ -78,7 +82,24 @@ async function cursorFetch(method, path, { query, body, timeoutMs = 60000 } = {}
   }
 }
 
-export function createAgent({ prompt, repository, ref, model, autoCreatePR, name }) {
+export function buildCreateAgentRequest(
+  { prompt, repository, ref, model, autoCreatePR, name },
+  webhook,
+) {
+  if (webhook?.url && webhook?.secret) {
+    const payload = {
+      prompt: { text: prompt },
+      webhook: { url: webhook.url, secret: webhook.secret },
+    };
+    if (repository) {
+      payload.source = { repository, ...(ref ? { ref } : {}) };
+    }
+    if (model) payload.model = String(model);
+    if (autoCreatePR === true || autoCreatePR === "true") {
+      payload.target = { autoCreatePr: true };
+    }
+    return { path: "/v0/agents", body: payload, basic: false };
+  }
   const payload = {
     prompt: { text: prompt },
   };
@@ -93,7 +114,58 @@ export function createAgent({ prompt, repository, ref, model, autoCreatePR, name
   }
   if (model) payload.model = { id: model };
   if (autoCreatePR === true || autoCreatePR === "true") payload.autoCreatePR = true;
-  return cursorFetch("POST", "/v1/agents", { body: payload });
+  return { path: "/v1/agents", body: payload, basic: false };
+}
+
+export function cursorErrorMessage(err) {
+  const body = err?.body;
+  if (typeof body?.error === "string") return body.error;
+  if (body?.error?.message) return body.error.message;
+  if (typeof body?.message === "string") return body.message;
+  return err?.message || "";
+}
+
+function isInvalidModelError(err) {
+  if (!(err instanceof CursorApiError) || err.status !== 400) return false;
+  return /model/i.test(cursorErrorMessage(err));
+}
+
+async function postCreate(req) {
+  try {
+    return await cursorFetch("POST", req.path, { body: req.body, basic: req.basic });
+  } catch (err) {
+    if (err instanceof CursorApiError && err.status === 401 && req.basic === false) {
+      return await cursorFetch("POST", req.path, { body: req.body, basic: true });
+    }
+    throw err;
+  }
+}
+
+export async function createAgent(opts) {
+  const webhook = outboundWebhookConfig();
+  const req = buildCreateAgentRequest(opts, webhook);
+  log("info", "cursor_create", {
+    path: req.path,
+    webhookAttached: Boolean(webhook),
+    repository: opts.repository || "",
+  });
+  let created;
+  let modelFallback = false;
+  try {
+    created = await postCreate(req);
+  } catch (err) {
+    if (webhook && opts.model && isInvalidModelError(err)) {
+      const retry = buildCreateAgentRequest({ ...opts, model: undefined }, webhook);
+      created = await postCreate(retry);
+      modelFallback = true;
+    } else {
+      throw err;
+    }
+  }
+  if (req.path === "/v0/agents" && created?.id && !created.agent) {
+    return { agent: created, webhookAttached: true, modelFallback };
+  }
+  return { ...created, webhookAttached: Boolean(webhook), modelFallback };
 }
 
 export function listAgents({ limit = 50, cursor, includeArchived = true } = {}) {

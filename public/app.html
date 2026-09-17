@@ -43,6 +43,7 @@
         <label for="model">النموذج (اختياري)</label>
         <select id="model"></select>
         <p><button id="launch">إطلاق</button></p>
+        <p class="muted">عند الإطلاق تُرفق لوحتنا تلقائيًا رابط الـ webhook والسر الحالي. لا حاجة للصقهما في Cursor.com. بعض النماذج الحديثة غير متاحة على مسار الإشعار؛ حينها يُستخدم النموذج الافتراضي مع الإبقاء على الـ webhook.</p>
         <p class="flash" id="launch-msg"></p>
       </div>
     </div>
@@ -86,7 +87,7 @@
       </p>
       <p class="flash" id="tg-msg"></p>
       <h2>Webhook لـ Cursor</h2>
-      <p class="muted">انسخ الرابط والسر بعد تسجيل الدخول والصقهما عند إنشاء الـ agent في Cursor (ليسا علنيين). السر يظهر هنا كاملًا غير مقنّع لنسخه حرفيًا.</p>
+      <p class="muted">زر الإطلاق في هذه اللوحة يرسل الرابط والسر تلقائيًا إلى Cursor مع كل agent جديد. الحقول أدناه للمراجعة والنسخ فقط، وليست علنية.</p>
       <label for="tg-webhook-url">رابط الـ webhook</label>
       <div class="row">
         <input id="tg-webhook-url" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />

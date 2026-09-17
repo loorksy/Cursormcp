@@ -163,7 +163,7 @@ document.getElementById("launch").addEventListener("click", async () => {
   const msg = document.getElementById("launch-msg");
   msg.textContent = "";
   try {
-    await api("/api/agents", {
+    const data = await api("/api/agents", {
       method: "POST",
       body: JSON.stringify({
         repository: document.getElementById("repo").value,
@@ -173,7 +173,13 @@ document.getElementById("launch").addEventListener("click", async () => {
     });
     document.getElementById("prompt").value = "";
     msg.className = "ok";
-    msg.textContent = "تم الإطلاق.";
+    if (data.modelFallback) {
+      msg.textContent = "تم الإطلاق مع الإشعار. النموذج المختار غير متاح مع مسار الـ webhook، فاستُخدم الافتراضي.";
+    } else if (data.webhookAttached) {
+      msg.textContent = "تم الإطلاق. سيُرسل إشعار تيليجرام عند الانتهاء أو الفشل.";
+    } else {
+      msg.textContent = "تم الإطلاق.";
+    }
     await loadAgents();
   } catch (err) {
     msg.className = "flash";

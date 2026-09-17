@@ -4,8 +4,23 @@ import { join } from "node:path";
 import { getDb, getSetting, paths } from "./lib.js";
 import { sendTelegramMessage } from "./telegram-notify.js";
 
-function webhookSecret() {
+export function getCursorWebhookUrl() {
+  const base = (process.env.PUBLIC_BASE_URL || "https://mcp.lork.cloud").replace(/\/$/, "");
+  return `${base}/webhooks/cursor-agent`;
+}
+
+export function getCursorWebhookSecret() {
   return (process.env.CURSOR_WEBHOOK_SECRET || "").trim();
+}
+
+export function outboundWebhookConfig() {
+  const secret = getCursorWebhookSecret();
+  if (secret.length < 32) return null;
+  return { url: getCursorWebhookUrl(), secret };
+}
+
+function webhookSecret() {
+  return getCursorWebhookSecret();
 }
 
 export function verifyCursorWebhookSignature(secret, rawBody, signatureHeader) {
