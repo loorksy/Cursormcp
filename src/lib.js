@@ -3,6 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import { contextFields } from "./context.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -64,6 +65,7 @@ export function log(level, message, extra = {}) {
     ts: new Date().toISOString(),
     level,
     message,
+    ...contextFields(),
     ...redact(extra),
   });
   const dest = level === "error" ? process.stderr : process.stdout;

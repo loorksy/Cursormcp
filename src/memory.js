@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { getDb } from "./lib.js";
 import { createRun } from "./cursor-api.js";
 import { PROMPT_INJECTION_WARNING, systemGuideText } from "./memory-guide.js";
+import { ensureOrchestratorTables } from "./schema-v2.js";
 
 export { PROMPT_INJECTION_WARNING, systemGuideText };
 
@@ -9,6 +10,7 @@ const actorStore = new AsyncLocalStorage();
 export const MAX_CONSECUTIVE_STEPS = 3;
 const TASK_STATUSES = new Set([
   "pending",
+  "blocked",
   "in_progress",
   "done_proposed",
   "done_verified",
@@ -177,6 +179,7 @@ export function ensureMemoryTables() {
       SELECT RAISE(ABORT, 'audit_log is append-only');
     END;
   `);
+  ensureOrchestratorTables();
 }
 
 function nowIso() {
@@ -189,7 +192,11 @@ function bool(v) {
 
 function rowTask(row) {
   if (!row) return null;
-  return { ...row, verified_by_user: bool(row.verified_by_user) };
+  return {
+    ...row,
+    verified_by_user: bool(row.verified_by_user),
+    depends_on: listTaskDependencies(row.id).map((d) => d.id),
+  };
 }
 
 export function writeAudit(projectId, actionType, details) {
@@ -296,6 +303,80 @@ export function listProjects() {
   return getDb().prepare("SELECT * FROM projects ORDER BY id").all();
 }
 
+export function getTask(id) {
+  return requireTask(Number(id));
+}
+
+export function updateProject(id, fields = {}) {
+  const project = requireProject(Number(id));
+  const name = fields.name != null ? String(fields.name).trim() : project.name;
+  if (!name) throw new MemoryError("اسم المشروع مطلوب");
+  const ts = nowIso();
+  getDb()
+    .prepare(
+      `UPDATE projects SET name = ?, repo_url = ?, description = ?, goal = ?, stack_json = ?, verify_json = ?, updated_at = ? WHERE id = ?`,
+    )
+    .run(
+      name,
+      fields.repo_url != null ? String(fields.repo_url).trim() : project.repo_url,
+      fields.description != null ? String(fields.description).trim() : project.description,
+      fields.goal != null ? String(fields.goal).trim() : project.goal || "",
+      fields.stack_json != null ? String(fields.stack_json) : project.stack_json || "",
+      fields.verify_json != null ? String(fields.verify_json) : project.verify_json || "",
+      ts,
+      project.id,
+    );
+  writeAudit(project.id, "project_update", name);
+  return requireProject(project.id);
+}
+
+export function setTaskDependencies(taskId, dependsOn = []) {
+  const task = requireTask(Number(taskId));
+  const db = getDb();
+  db.prepare("DELETE FROM task_dependencies WHERE task_id = ?").run(task.id);
+  for (const raw of dependsOn) {
+    const dep = requireTask(Number(raw));
+    if (dep.project_id !== task.project_id) throw new MemoryError("الاعتماد يجب أن يكون في نفس المشروع");
+    if (dep.id === task.id) throw new MemoryError("المهمة لا تعتمد على نفسها");
+    db.prepare("INSERT OR IGNORE INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?)").run(task.id, dep.id);
+  }
+  refreshTaskBlockers(task.project_id);
+  return listTaskDependencies(task.id);
+}
+
+export function listTaskDependencies(taskId) {
+  return getDb()
+    .prepare(
+      `SELECT d.depends_on_task_id AS id, t.title, t.status
+       FROM task_dependencies d JOIN tasks t ON t.id = d.depends_on_task_id
+       WHERE d.task_id = ?`,
+    )
+    .all(Number(taskId));
+}
+
+export function dependenciesSatisfied(taskId) {
+  const deps = listTaskDependencies(taskId);
+  return deps.every((d) => d.status === "done_verified");
+}
+
+export function refreshTaskBlockers(projectId) {
+  const tasks = getDb().prepare("SELECT * FROM tasks WHERE project_id = ?").all(Number(projectId));
+  const ts = nowIso();
+  for (const task of tasks) {
+    if (["done_verified", "done_proposed", "failed"].includes(task.status)) continue;
+    const ok = dependenciesSatisfied(task.id);
+    if (!ok && task.status !== "blocked") {
+      getDb()
+        .prepare("UPDATE tasks SET status = 'blocked', blocked_reason = ?, updated_at = ? WHERE id = ?")
+        .run("waiting on dependencies", ts, task.id);
+    } else if (ok && task.status === "blocked") {
+      getDb()
+        .prepare("UPDATE tasks SET status = 'pending', blocked_reason = '', updated_at = ? WHERE id = ?")
+        .run(ts, task.id);
+    }
+  }
+}
+
 export function createProject({ name, repo_url, description }) {
   const title = String(name || "").trim();
   if (!title) throw new MemoryError("اسم المشروع مطلوب");
@@ -309,15 +390,15 @@ export function createProject({ name, repo_url, description }) {
   return requireProject(info.lastInsertRowid);
 }
 
-export function addTask({ project_id, title, description, proposed_by, agent_id }) {
+export function addTask({ project_id, title, description, proposed_by, agent_id, role, depends_on }) {
   const project = requireProject(Number(project_id));
   const heading = String(title || "").trim();
   if (!heading) throw new MemoryError("عنوان المهمة مطلوب");
   const ts = nowIso();
   const info = getDb()
     .prepare(
-      `INSERT INTO tasks (project_id, title, description, status, proposed_by, evidence, verified_by_user, agent_id, consecutive_steps, created_at, updated_at)
-       VALUES (?, ?, ?, 'pending', ?, '', 0, ?, 0, ?, ?)`,
+      `INSERT INTO tasks (project_id, title, description, status, proposed_by, evidence, verified_by_user, agent_id, consecutive_steps, role, created_at, updated_at)
+       VALUES (?, ?, ?, 'pending', ?, '', 0, ?, 0, ?, ?, ?)`,
     )
     .run(
       project.id,
@@ -325,10 +406,13 @@ export function addTask({ project_id, title, description, proposed_by, agent_id 
       String(description || "").trim(),
       String(proposed_by || currentActor()),
       String(agent_id || "").trim(),
+      String(role || "").trim(),
       ts,
       ts,
     );
   writeAudit(project.id, "task_add", `task#${info.lastInsertRowid} ${heading}`);
+  if (depends_on?.length) setTaskDependencies(info.lastInsertRowid, depends_on);
+  else refreshTaskBlockers(project.id);
   return requireTask(info.lastInsertRowid);
 }
 
@@ -340,6 +424,9 @@ export function updateTaskStatus({ task_id, new_status, notes }) {
     throw new MemoryError(
       "لا يمكن تعيين done_proposed أو done_verified من task_update_status. استخدم task_propose_done للدليل، والتأكيد من اللوحة فقط.",
     );
+  }
+  if (status === "in_progress" && !dependenciesSatisfied(task.id)) {
+    throw new MemoryError("لا يبدأ التنفيذ قبل اكتمال الاعتماديات (depends_on).");
   }
   assertStepBudget(task);
   const ts = nowIso();
@@ -389,6 +476,7 @@ export function confirmTask(taskId) {
     )
     .run(ts, ts, task.id);
   writeAudit(task.project_id, "task_confirm", `task#${task.id}`);
+  refreshTaskBlockers(task.project_id);
   return requireTask(task.id);
 }
 

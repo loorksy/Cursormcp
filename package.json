@@ -6,7 +6,11 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "worker": "node src/worker.js",
+    "test": "node --experimental-test-isolation=process --test --test-timeout=60000 test/*.test.js",
+    "lint": "node --check src/server.js && node --check src/mcp.js && node --check src/orchestrator.js && node --check src/events.js && node --check src/processors.js && node --check src/http-v2.js && node --check src/telegram-service.js && node --check src/webhook-gateway.js && node --check src/polling.js && node --check src/verification.js && node --check src/healing.js && node --check src/memory.js && node --check src/cursor-api.js && node --check src/mcp-v2.js && node --check src/telegram-webhook.js && node --check src/github.js && node --check src/state-machine.js && node --check src/agents-store.js && node --check src/schema-v2.js && node --check src/config.js && node --check src/worker.js",
+    "typecheck": "npm run lint"
   },
   "engines": {
     "node": ">=22"

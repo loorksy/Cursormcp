@@ -38,7 +38,15 @@ import {
 import { handleMcpPost, handleMcpSession, mcpSessionCount } from "./mcp.js";
 import { mountOAuth } from "./oauth.js";
 import { sendTelegramMessage } from "./telegram-notify.js";
-import { handleCursorWebhook, listTelegramNotifyLog, getCursorWebhookUrl, getCursorWebhookSecret } from "./webhook.js";
+import { listTelegramNotifyLog, getCursorWebhookUrl, getCursorWebhookSecret } from "./webhook.js";
+import { handleWebhookGateway } from "./webhook-gateway.js";
+import { handleTelegramWebhook } from "./telegram-webhook.js";
+import { mountV2Routes, publicReady } from "./http-v2.js";
+import { registerDefaultProcessors } from "./processors.js";
+import { startEventLoop, stopEventLoop } from "./events.js";
+import { startPolling, stopPolling } from "./polling.js";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 import {
   MemoryError,
   acceptRuleSuggestion,
@@ -74,13 +82,13 @@ const app = express();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
-app.post(
-  "/webhooks/cursor-agent",
-  express.raw({ type: "*/*", limit: "1mb" }),
-  (req, res, next) => {
-    handleCursorWebhook(req, res).catch(next);
-  },
-);
+const webhookRaw = express.raw({ type: "*/*", limit: "1mb" });
+app.post("/webhooks/cursor-agent", webhookRaw, (req, res, next) => {
+  handleWebhookGateway(req, res).catch(next);
+});
+app.post("/webhooks/cursor", webhookRaw, (req, res, next) => {
+  handleWebhookGateway(req, res).catch(next);
+});
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
@@ -88,7 +96,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const start = Date.now();
   res.on("finish", () => {
-    if ((req.path === "/health" || req.path === "/system-guide") && req.method === "GET") return;
+    if ((req.path === "/health" || req.path === "/ready" || req.path === "/system-guide") && req.method === "GET") return;
     log("info", "http", {
       method: req.method,
       path: req.path,
@@ -139,6 +147,7 @@ function publicHealth() {
       oauth: true,
     },
     apiKeyConfigured: apiKeyConfigured(),
+    orchestrator: true,
     uptimeSec: Math.round((Date.now() - startedAt) / 1000),
     port: PORT,
   };
@@ -148,6 +157,11 @@ app.get("/health", (req, res) => {
   const wantsHtml = (req.headers.accept || "").includes("text/html");
   if (wantsHtml) return res.sendFile(paths.public + "/health.html");
   res.json(publicHealth());
+});
+
+app.get("/ready", (_req, res) => {
+  const ready = publicReady();
+  res.status(ready.ok ? 200 : 503).json(ready);
 });
 
 app.get("/system-guide", (req, res) => {
@@ -203,7 +217,12 @@ app.post("/mcp", requireMcp, handleMcpPost);
 app.get("/mcp", requireMcp, handleMcpSession);
 app.delete("/mcp", requireMcp, handleMcpSession);
 
+app.post("/webhooks/telegram", (req, res, next) => {
+  handleTelegramWebhook(req, res).catch(next);
+});
+
 app.use("/api", requireAuth);
+mountV2Routes(app);
 
 function handleApiError(res, err) {
   if (err.code === "NO_API_KEY") {
@@ -539,6 +558,30 @@ app.use((req, res) => {
   res.status(404).send("Not found");
 });
 
-app.listen(PORT, HOST, () => {
-  log("info", "listening", { host: HOST, port: PORT });
+app.use((err, _req, res, _next) => {
+  handleApiError(res, err);
 });
+
+export function startBridge() {
+  registerDefaultProcessors();
+  startEventLoop();
+  if (process.env.DISABLE_POLLER !== "true") startPolling();
+  return app.listen(PORT, HOST, () => {
+    log("info", "listening", { host: HOST, port: PORT });
+  });
+}
+
+export function stopBridgeJobs() {
+  stopEventLoop();
+  stopPolling();
+}
+
+export { app };
+
+registerDefaultProcessors();
+
+const isMain =
+  process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isMain && process.env.BRIDGE_TEST !== "true") {
+  startBridge();
+}

@@ -1,5 +1,27 @@
 # MCP Cursor Bridge
 
+جسر MCP + لوحة تحكم + منسّق إنتاج لوكلاء [Cursor Cloud Agents](https://cursor.com/docs/cloud-agent/api/endpoints).
+
+الإنتاج: systemd `mcp-cursor-bridge` على `127.0.0.1:18800` خلف https://mcp.lork.cloud
+
+اقرأ بالترتيب: [AUDIT.md](AUDIT.md) → [ARCHITECTURE.md](ARCHITECTURE.md) → [DEPLOYMENT.md](DEPLOYMENT.md) → [API.md](API.md) → [WEBHOOKS.md](WEBHOOKS.md) → [TELEGRAM.md](TELEGRAM.md) → [SECURITY.md](SECURITY.md) → [TESTING.md](TESTING.md) → [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+## تشغيل محلي
+
+```bash
+cp .env.example .env
+npm install
+npm test
+npm start
+```
+
+`GET /health` و `GET /ready` للتأكد أن SQLite والعملية يعملان.
+
+## قيود الـ VPS
+
+لا تلمس docker / nginx العام / postgres / redis / pm2. لا بورتات جديدة. نفس الوحدة `mcp-cursor-bridge` فقط.
+
+
 جسر MCP بين عملاء مثل Claude ولوحة تحكم ويب وبين [Cursor Cloud Agents API](https://cursor.com/docs/cloud-agent/api/endpoints).
 
 الإنتاج على هذا المستودع يعمل على VPS منفصل:
