@@ -314,7 +314,7 @@
     }
     return el("div", {}, [
       el("p", { className: "muted", textContent: "للعرض فقط. لا يمكن تعديل هذا السجل أو حذفه." }),
-      table,
+      el("div", { className: "table-wrap" }, [table]),
     ]);
   }
 
