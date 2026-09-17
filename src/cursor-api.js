@@ -1,7 +1,9 @@
 import { getSetting, decryptSecret, log } from "./lib.js";
 import { outboundWebhookConfig } from "./webhook.js";
 
-const API_BASE = "https://api.cursor.com";
+function apiBase() {
+  return (process.env.CURSOR_API_BASE_URL || "https://api.cursor.com").replace(/\/$/, "");
+}
 
 export class CursorApiError extends Error {
   constructor(status, body, path) {
@@ -39,7 +41,7 @@ function authHeaders(basic = false) {
 }
 
 async function cursorFetch(method, path, { query, body, timeoutMs = 60000, basic = false } = {}) {
-  const url = new URL(path, API_BASE);
+  const url = new URL(path, apiBase());
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v != null && v !== "") url.searchParams.set(k, String(v));
@@ -189,6 +191,26 @@ export function getRun(agentId, runId) {
     "GET",
     `/v1/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(runId)}`,
   );
+}
+
+export function listRuns(agentId, { limit = 20, cursor } = {}) {
+  return cursorFetch("GET", `/v1/agents/${encodeURIComponent(agentId)}/runs`, {
+    query: { limit, cursor },
+  });
+}
+
+export function cancelRun(agentId, runId) {
+  return cursorFetch("POST", `/v1/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(runId)}/cancel`, {
+    body: {},
+  });
+}
+
+export function archiveAgent(agentId) {
+  return cursorFetch("POST", `/v1/agents/${encodeURIComponent(agentId)}/archive`, { body: {} });
+}
+
+export function unarchiveAgent(agentId) {
+  return cursorFetch("POST", `/v1/agents/${encodeURIComponent(agentId)}/unarchive`, { body: {} });
 }
 
 export function listModels() {

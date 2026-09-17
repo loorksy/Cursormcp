@@ -14,6 +14,7 @@ import {
 } from "./cursor-api.js";
 import { getSetting, log, logRequest } from "./lib.js";
 import { registerMemoryMcpTools } from "./memory-mcp.js";
+import { registerV2McpTools } from "./mcp-v2.js";
 import { resolveActorFromRequest, runWithActor } from "./memory.js";
 
 const transports = new Map();
@@ -201,6 +202,7 @@ export function createBridgeMcpServer() {
   );
 
   registerMemoryMcpTools(server);
+  registerV2McpTools(server);
 
   return server;
 }
