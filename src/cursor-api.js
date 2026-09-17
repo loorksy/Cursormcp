@@ -69,6 +69,7 @@ async function cursorFetch(method, path, { query, body, timeoutMs = 60000, basic
       path,
       status: res.status,
       ms: Date.now() - started,
+      ...(res.ok ? {} : { error: json }),
     });
     if (!res.ok) throw new CursorApiError(res.status, json, path);
     return json;
@@ -97,7 +98,7 @@ export function buildCreateAgentRequest(
     if (autoCreatePR === true || autoCreatePR === "true") {
       payload.target = { autoCreatePr: true };
     }
-    return { path: "/v0/agents", body: payload, basic: true };
+    return { path: "/v0/agents", body: payload, basic: false };
   }
   const payload = {
     prompt: { text: prompt },
@@ -116,6 +117,30 @@ export function buildCreateAgentRequest(
   return { path: "/v1/agents", body: payload, basic: false };
 }
 
+export function cursorErrorMessage(err) {
+  const body = err?.body;
+  if (typeof body?.error === "string") return body.error;
+  if (body?.error?.message) return body.error.message;
+  if (typeof body?.message === "string") return body.message;
+  return err?.message || "";
+}
+
+function isInvalidModelError(err) {
+  if (!(err instanceof CursorApiError) || err.status !== 400) return false;
+  return /model/i.test(cursorErrorMessage(err));
+}
+
+async function postCreate(req) {
+  try {
+    return await cursorFetch("POST", req.path, { body: req.body, basic: req.basic });
+  } catch (err) {
+    if (err instanceof CursorApiError && err.status === 401 && req.basic === false) {
+      return await cursorFetch("POST", req.path, { body: req.body, basic: true });
+    }
+    throw err;
+  }
+}
+
 export async function createAgent(opts) {
   const webhook = outboundWebhookConfig();
   const req = buildCreateAgentRequest(opts, webhook);
@@ -125,19 +150,22 @@ export async function createAgent(opts) {
     repository: opts.repository || "",
   });
   let created;
+  let modelFallback = false;
   try {
-    created = await cursorFetch("POST", req.path, { body: req.body, basic: req.basic });
+    created = await postCreate(req);
   } catch (err) {
-    if (req.basic && err instanceof CursorApiError && err.status === 401) {
-      created = await cursorFetch("POST", req.path, { body: req.body, basic: false });
+    if (webhook && opts.model && isInvalidModelError(err)) {
+      const retry = buildCreateAgentRequest({ ...opts, model: undefined }, webhook);
+      created = await postCreate(retry);
+      modelFallback = true;
     } else {
       throw err;
     }
   }
   if (req.path === "/v0/agents" && created?.id && !created.agent) {
-    return { agent: created, webhookAttached: true };
+    return { agent: created, webhookAttached: true, modelFallback };
   }
-  return { ...created, webhookAttached: Boolean(webhook) };
+  return { ...created, webhookAttached: Boolean(webhook), modelFallback };
 }
 
 export function listAgents({ limit = 50, cursor, includeArchived = true } = {}) {

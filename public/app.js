@@ -173,9 +173,13 @@ document.getElementById("launch").addEventListener("click", async () => {
     });
     document.getElementById("prompt").value = "";
     msg.className = "ok";
-    msg.textContent = data.webhookAttached
-      ? "تم الإطلاق. سيُرسل إشعار تيليجرام عند الانتهاء أو الفشل."
-      : "تم الإطلاق.";
+    if (data.modelFallback) {
+      msg.textContent = "تم الإطلاق مع الإشعار. النموذج المختار غير متاح مع مسار الـ webhook، فاستُخدم الافتراضي.";
+    } else if (data.webhookAttached) {
+      msg.textContent = "تم الإطلاق. سيُرسل إشعار تيليجرام عند الانتهاء أو الفشل.";
+    } else {
+      msg.textContent = "تم الإطلاق.";
+    }
     await loadAgents();
   } catch (err) {
     msg.className = "flash";
