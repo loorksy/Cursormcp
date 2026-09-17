@@ -172,24 +172,32 @@ function loginPage(pending, error) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b1017" />
   <title>تفويض MCP</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=ui3" />
 </head>
-<body>
+<body class="login-page">
   <div class="login-box card">
-    <h1>تفويض Claude للوصول إلى الجسر</h1>
+    <div class="brand login-brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div>
+        <h1>تفويض MCP</h1>
+        <p class="muted">الموافقة على اتصال Claude</p>
+      </div>
+    </div>
     <p class="muted">أدخل نفس بيانات لوحة التحكم للموافقة على اتصال MCP.</p>
     ${err}
     <form method="post" action="/oauth/login">
       <input type="hidden" name="pending" value="${escapeHtml(pending)}" />
-      <p>
+      <div class="field">
         <label for="username">اسم المستخدم</label>
         <input id="username" name="username" autocomplete="username" required />
-      </p>
-      <p>
+      </div>
+      <div class="field">
         <label for="password">كلمة المرور</label>
         <input id="password" name="password" type="password" autocomplete="current-password" required />
-      </p>
+      </div>
       <button type="submit">السماح بالاتصال</button>
     </form>
   </div>

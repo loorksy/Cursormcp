@@ -25,11 +25,33 @@ function badge(status) {
   return span;
 }
 
+function formatUptime(sec) {
+  const s = Math.max(0, Number(sec) || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h) return h + "س " + m + "د";
+  if (m) return m + "د " + (s % 60) + "ث";
+  return s + "ث";
+}
+
+function statTile(label, value, extraClass) {
+  const box = el("div", { className: "stat" });
+  box.append(el("span", { className: "stat-label", textContent: label }));
+  box.append(el("span", { className: "stat-value" + (extraClass ? " " + extraClass : ""), textContent: value }));
+  return box;
+}
+
 async function loadHealth() {
   const data = await api("/api/health");
-  const keyNote = data.apiKeyConfigured ? "مفتاح API مضبوط" : "مفتاح API غير مضبوط بعد";
-  document.getElementById("health-summary").innerHTML =
-    `<span class="ok">MCP يعمل</span> — جلسات: ${data.mcp.sessions} — ${keyNote} — uptime ${data.uptimeSec}s`;
+  const box = document.getElementById("health-summary");
+  box.className = "stat-grid";
+  box.innerHTML = "";
+  box.append(
+    statTile("الحالة", data.ok ? "يعمل" : "متوقف", data.ok ? "ok" : "bad"),
+    statTile("جلسات MCP", String(data.mcp?.sessions ?? 0)),
+    statTile("مفتاح API", data.apiKeyConfigured ? "مضبوط" : "غير مضبوط", data.apiKeyConfigured ? "ok" : "warn"),
+    statTile("مدة التشغيل", formatUptime(data.uptimeSec)),
+  );
 }
 
 async function loadMe() {
@@ -43,9 +65,9 @@ async function loadSettings() {
   const box = document.getElementById("settings");
   box.innerHTML = "";
   for (const item of data.items) {
-    const wrap = el("p", {});
+    const wrap = el("div", { className: "field" });
     wrap.append(el("label", { textContent: item.key }));
-    const input = el("input", { value: item.value, dataset: { key: item.key } });
+    const input = el("input", { value: item.value });
     input.dataset.key = item.key;
     wrap.append(input);
     box.append(wrap);
@@ -81,19 +103,39 @@ async function loadReposAndModels() {
   }
 }
 
+function extLink(href, text) {
+  return el("a", { href, target: "_blank", rel: "noopener noreferrer", textContent: text });
+}
+
 async function loadAgents() {
   const body = document.getElementById("agents");
   body.innerHTML = "";
   try {
     const data = await api("/api/agents");
     if (!data.items?.length) {
-      body.append(el("tr", {}, [el("td", { colSpan: 4, textContent: "لا توجد agents بعد." })]));
+      body.append(el("p", { className: "muted empty", textContent: "لا توجد agents بعد." }));
       return;
     }
     for (const agent of data.items) {
-      const follow = el("div", {});
+      const card = el("article", { className: "item-card" });
+      const title = el("div", { className: "min-0" });
+      title.append(
+        el("strong", { textContent: agent.name || agent.id }),
+        el("div", { className: "muted mono", textContent: agent.id }),
+      );
+      const top = el("div", { className: "item-top" });
+      top.append(title, badge(agent.status));
+      card.append(top);
+
+      const meta = el("div", { className: "item-meta" });
+      if (agent.prUrl) meta.append(extLink(agent.prUrl, "فتح PR"));
+      if (agent.branch) meta.append(el("span", { className: "muted mono", textContent: agent.branch }));
+      if (agent.url) meta.append(extLink(agent.url, "فتح في Cursor"));
+      if (meta.childNodes.length) card.append(meta);
+
+      const follow = el("div", { className: "follow-row" });
       const input = el("input", { placeholder: "تعليمات لاحقة..." });
-      const btn = el("button", { className: "secondary", textContent: "إرسال" });
+      const btn = el("button", { className: "secondary", type: "button", textContent: "إرسال" });
       btn.addEventListener("click", async () => {
         if (!input.value.trim()) return;
         btn.disabled = true;
@@ -111,31 +153,11 @@ async function loadAgents() {
         }
       });
       follow.append(input, btn);
-
-      const git = [];
-      if (agent.branch) git.push(agent.branch);
-      const gitCell = el("td", {});
-      if (agent.prUrl) {
-        gitCell.append(el("a", { href: agent.prUrl, target: "_blank", textContent: "PR" }), " ");
-      }
-      if (agent.branch) gitCell.append(document.createTextNode(agent.branch));
-      if (agent.url) {
-        gitCell.append(el("div", {}), el("a", { href: agent.url, target: "_blank", textContent: "فتح في Cursor" }));
-      }
-
-      const tr = el("tr", {}, [
-        el("td", {}, [
-          el("div", { textContent: agent.name || agent.id }),
-          el("div", { className: "muted", textContent: agent.id }),
-        ]),
-        el("td", {}, [badge(agent.status)]),
-        gitCell,
-        el("td", {}, [follow]),
-      ]);
-      body.append(tr);
+      card.append(follow);
+      body.append(card);
     }
   } catch (err) {
-    body.append(el("tr", {}, [el("td", { colSpan: 4, textContent: err.message })]));
+    body.append(el("p", { className: "flash", textContent: err.message }));
   }
 }
 
@@ -300,4 +322,25 @@ async function copyField(id, label) {
 document.getElementById("copy-webhook-url").addEventListener("click", () => copyField("tg-webhook-url", "الرابط"));
 document.getElementById("copy-webhook-secret").addEventListener("click", () => copyField("tg-webhook-secret", "السر"));
 
+function setupSectionNav() {
+  const links = [...document.querySelectorAll(".nav a[href^='#']")];
+  const sections = links.map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+  if (!sections.length) return;
+  const sync = () => {
+    let current = sections[0];
+    for (const sec of sections) {
+      if (sec.getBoundingClientRect().top <= 110) current = sec;
+    }
+    for (const a of links) {
+      const on = a.getAttribute("href") === "#" + current.id;
+      a.classList.toggle("active", on);
+      if (on) a.setAttribute("aria-current", "location");
+      else a.removeAttribute("aria-current");
+    }
+  };
+  window.addEventListener("scroll", sync, { passive: true });
+  sync();
+}
+
+setupSectionNav();
 Promise.all([loadMe(), loadHealth(), loadSettings(), loadReposAndModels(), loadAgents(), loadTelegram()]).catch(() => {});

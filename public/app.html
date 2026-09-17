@@ -3,178 +3,221 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b1017" />
   <title>لوحة التحكم — MCP Cursor Bridge</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=ui3" />
 </head>
 <body>
-  <div class="wrap">
-    <div class="row" style="justify-content:space-between;margin-bottom:16px">
-      <div>
-        <h1>MCP Cursor Bridge</h1>
-        <div class="muted" id="who"></div>
+  <a class="skip" href="#main">تخطي إلى المحتوى</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <h1>MCP Cursor Bridge</h1>
+          <div class="muted" id="who">...</div>
+        </div>
       </div>
-      <div class="row">
-        <a href="/health" class="muted">صفحة الصحة</a>
-        <button class="secondary" id="logout">خروج</button>
+      <nav class="nav" aria-label="أقسام اللوحة">
+        <a href="#sec-overview">نظرة عامة</a>
+        <a href="#sec-launch">إطلاق</a>
+        <a href="#sec-agents">الوكلاء</a>
+        <a href="#sec-telegram">تيليجرام</a>
+        <a href="#sec-memory">الذاكرة</a>
+        <a href="#sec-settings">إعدادات</a>
+      </nav>
+      <div class="top-actions">
+        <a href="/health" class="muted">الصحة</a>
+        <a href="/system-guide" class="muted">الدليل</a>
+        <button class="secondary" id="logout" type="button">خروج</button>
       </div>
     </div>
+  </header>
 
-    <div class="card" id="health-card">
-      <h2>صحة الجسر</h2>
-      <div id="health-summary" class="muted">...</div>
-    </div>
+  <div class="wrap" id="main">
+    <section class="section" id="sec-overview">
+      <div class="page-head">
+        <div>
+          <p class="kicker">لوحة التشغيل</p>
+          <h2>نظرة عامة</h2>
+        </div>
+      </div>
+      <div class="card" id="health-card">
+        <div class="card-head">
+          <h2>صحة الجسر</h2>
+        </div>
+        <div id="health-summary" class="stat-grid muted">جاري التحميل…</div>
+      </div>
+    </section>
 
-    <div class="grid-2">
+    <section class="section" id="sec-launch">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>مفتاح Cursor API</h2></div>
+          <p class="muted">يُخزَّن مشفّرًا على السيرفر. بعد الحفظ تظهر آخر 4 خانات فقط.</p>
+          <p>الحالي: <strong id="key-mask">غير مضبوط</strong></p>
+          <div class="field">
+            <label for="api-key">مفتاح جديد</label>
+            <input id="api-key" type="password" autocomplete="off" placeholder="key_..." />
+          </div>
+          <p><button id="save-key" type="button">حفظ المفتاح</button></p>
+          <p class="flash" id="key-msg"></p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>إطلاق Agent</h2></div>
+          <div class="field">
+            <label for="repo">المستودع</label>
+            <select id="repo"></select>
+          </div>
+          <div class="field">
+            <label for="prompt">التعليمات</label>
+            <textarea id="prompt" rows="5" placeholder="صف المهمة..."></textarea>
+          </div>
+          <div class="field">
+            <label for="model">النموذج (اختياري)</label>
+            <select id="model"></select>
+          </div>
+          <p><button id="launch" type="button">إطلاق</button></p>
+          <p class="hint">عند الإطلاق يُرفق رابط الـ webhook والسر تلقائيًا. بعض النماذج الحديثة غير متاحة على مسار الإشعار؛ حينها يُستخدم الافتراضي مع الإبقاء على الـ webhook.</p>
+          <p class="flash" id="launch-msg"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="sec-agents">
       <div class="card">
-        <h2>مفتاح Cursor API</h2>
-        <p class="muted">يُخزَّن مشفّرًا على السيرفر. بعد الحفظ تظهر آخر 4 خانات فقط.</p>
-        <p>الحالي: <strong id="key-mask">غير مضبوط</strong></p>
-        <label for="api-key">مفتاح جديد</label>
-        <input id="api-key" type="password" autocomplete="off" placeholder="key_..." />
-        <p><button id="save-key">حفظ المفتاح</button></p>
-        <p class="flash" id="key-msg"></p>
+        <div class="card-head">
+          <h2>الـ Agents</h2>
+          <button class="secondary" id="refresh" type="button">تحديث</button>
+        </div>
+        <div id="agents" class="stack"></div>
       </div>
+    </section>
+
+    <section class="section" id="sec-telegram">
       <div class="card">
-        <h2>إطلاق Agent</h2>
-        <label for="repo">المستودع</label>
-        <select id="repo"></select>
-        <label for="prompt">التعليمات</label>
-        <textarea id="prompt" rows="5" placeholder="صف المهمة..."></textarea>
-        <label for="model">النموذج (اختياري)</label>
-        <select id="model"></select>
-        <p><button id="launch">إطلاق</button></p>
-        <p class="muted">عند الإطلاق تُرفق لوحتنا تلقائيًا رابط الـ webhook والسر الحالي. لا حاجة للصقهما في Cursor.com. بعض النماذج الحديثة غير متاحة على مسار الإشعار؛ حينها يُستخدم النموذج الافتراضي مع الإبقاء على الـ webhook.</p>
-        <p class="flash" id="launch-msg"></p>
-      </div>
-    </div>
+        <div class="card-head"><h2>إشعارات تيليجرام</h2></div>
+        <p class="muted">إشعار فقط عند انتهاء أو فشل agent عبر webhook. لا تنفيذ تلقائي.</p>
+        <p>التوكن الحالي: <strong id="tg-token-mask">غير مضبوط</strong></p>
+        <p>Chat ID الحالي: <strong id="tg-chat-mask">غير مضبوط</strong></p>
+        <div class="field">
+          <label for="tg-token">TELEGRAM_BOT_TOKEN</label>
+          <input id="tg-token" type="password" autocomplete="off" placeholder="123456:ABC..." />
+        </div>
+        <div class="field">
+          <label for="tg-chat">TELEGRAM_CHAT_ID</label>
+          <input id="tg-chat" autocomplete="off" placeholder="-100..." />
+        </div>
+        <div class="switch">
+          <label for="tg-enabled">تفعيل الإشعارات</label>
+          <input id="tg-enabled" type="checkbox" />
+        </div>
+        <p class="row">
+          <button id="tg-save" type="button">حفظ تيليجرام</button>
+          <button class="secondary" id="tg-test" type="button">اختبار الإشعار</button>
+        </p>
+        <p class="flash" id="tg-msg"></p>
 
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <h2>الـ Agents</h2>
-        <button class="secondary" id="refresh">تحديث</button>
-      </div>
-      <div style="overflow:auto">
-        <table>
-          <thead>
-            <tr>
-              <th>الاسم</th>
-              <th>الحالة</th>
-              <th>الفرع / PR</th>
-              <th>متابعة</th>
-            </tr>
-          </thead>
-          <tbody id="agents"></tbody>
-        </table>
-      </div>
-    </div>
+        <h2>Webhook لـ Cursor</h2>
+        <p class="muted">الرابط والسر يظهران بعد تسجيل الدخول فقط، للنسخ والمراجعة.</p>
+        <div class="field">
+          <label for="tg-webhook-url">رابط الـ webhook</label>
+          <div class="copy-row">
+            <input id="tg-webhook-url" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />
+            <button type="button" class="secondary" id="copy-webhook-url">نسخ</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="tg-webhook-secret">السر (CURSOR_WEBHOOK_SECRET)</label>
+          <div class="copy-row">
+            <input id="tg-webhook-secret" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />
+            <button type="button" class="secondary" id="copy-webhook-secret">نسخ</button>
+          </div>
+        </div>
+        <p class="muted" id="tg-copy-status"></p>
 
-    <div class="card">
-      <h2>إشعارات تيليجرام</h2>
-      <p class="muted">إشعار فقط عند انتهاء أو فشل agent عبر webhook. لا تنفيذ تلقائي.</p>
-      <p>التوكن الحالي: <strong id="tg-token-mask">غير مضبوط</strong></p>
-      <p>Chat ID الحالي: <strong id="tg-chat-mask">غير مضبوط</strong></p>
-      <label for="tg-token">TELEGRAM_BOT_TOKEN</label>
-      <input id="tg-token" type="password" autocomplete="off" placeholder="123456:ABC..." />
-      <label for="tg-chat">TELEGRAM_CHAT_ID</label>
-      <input id="tg-chat" autocomplete="off" placeholder="-100..." />
-      <p class="row">
-        <label for="tg-enabled" style="margin:0">تفعيل الإشعارات</label>
-        <input id="tg-enabled" type="checkbox" style="width:auto" />
-      </p>
-      <p class="row">
-        <button id="tg-save">حفظ تيليجرام</button>
-        <button class="secondary" id="tg-test">اختبار الإشعار</button>
-      </p>
-      <p class="flash" id="tg-msg"></p>
-      <h2>Webhook لـ Cursor</h2>
-      <p class="muted">زر الإطلاق في هذه اللوحة يرسل الرابط والسر تلقائيًا إلى Cursor مع كل agent جديد. الحقول أدناه للمراجعة والنسخ فقط، وليست علنية.</p>
-      <label for="tg-webhook-url">رابط الـ webhook</label>
-      <div class="row">
-        <input id="tg-webhook-url" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />
-        <button type="button" class="secondary" id="copy-webhook-url">نسخ</button>
+        <h2>آخر الإشعارات</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الوقت</th>
+                <th>Agent</th>
+                <th>الحالة</th>
+                <th>أُرسل</th>
+              </tr>
+            </thead>
+            <tbody id="tg-log"></tbody>
+          </table>
+        </div>
       </div>
-      <label for="tg-webhook-secret">السر (CURSOR_WEBHOOK_SECRET)</label>
-      <div class="row">
-        <input id="tg-webhook-secret" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />
-        <button type="button" class="secondary" id="copy-webhook-secret">نسخ</button>
-      </div>
-      <p class="muted" id="tg-copy-status"></p>
-      <h2>آخر الإشعارات</h2>
-      <div style="overflow:auto">
-        <table>
-          <thead>
-            <tr>
-              <th>الوقت</th>
-              <th>Agent</th>
-              <th>الحالة</th>
-              <th>أُرسل</th>
-            </tr>
-          </thead>
-          <tbody id="tg-log"></tbody>
-        </table>
-      </div>
-    </div>
+    </section>
 
-    <div class="card" id="memory-card">
-      <div class="row" style="justify-content:space-between">
-        <h2>المشاريع — الذاكرة المركزية</h2>
-        <button class="secondary" id="memory-refresh" type="button">تحديث</button>
-      </div>
-      <p class="muted">الإنجاز المعتمد والقواعد المعتمدة لا يصيران حقيقة إلا بعد تأكيدك. ما يقترحه أي نموذج يبقى Draft.</p>
-      <div class="row">
-        <div class="grow">
+    <section class="section" id="sec-memory">
+      <div class="card" id="memory-card">
+        <div class="card-head">
+          <h2>المشاريع — الذاكرة المركزية</h2>
+          <button class="secondary" id="memory-refresh" type="button">تحديث</button>
+        </div>
+        <p class="muted">الإنجاز المعتمد والقواعد المعتمدة لا يصيران حقيقة إلا بعد تأكيدك. ما يقترحه أي نموذج يبقى Draft.</p>
+        <div class="field">
           <label for="memory-project">المشروع</label>
           <select id="memory-project"></select>
         </div>
-      </div>
-      <div class="row">
-        <div class="grow">
-          <label>اسم مشروع جديد</label>
-          <input id="memory-new-name" placeholder="اسم المشروع" />
+        <div class="grid-2">
+          <div class="field">
+            <label for="memory-new-name">اسم مشروع جديد</label>
+            <input id="memory-new-name" placeholder="اسم المشروع" />
+          </div>
+          <div class="field">
+            <label for="memory-new-repo">رابط المستودع</label>
+            <input id="memory-new-repo" class="mono" dir="ltr" placeholder="https://github.com/..." />
+          </div>
         </div>
-        <div class="grow">
-          <label>رابط المستودع</label>
-          <input id="memory-new-repo" dir="ltr" placeholder="https://github.com/..." />
+        <div class="field">
+          <label for="memory-new-desc">وصف / الهدف</label>
+          <textarea id="memory-new-desc" rows="2" placeholder="هدف المشروع"></textarea>
         </div>
+        <p><button class="secondary" id="memory-create" type="button">إنشاء مشروع</button></p>
+        <p class="flash" id="memory-msg"></p>
+        <div class="tabs" id="memory-tabs">
+          <button type="button" class="tab active" data-tab="tasks">المهام</button>
+          <button type="button" class="tab" data-tab="errors">الأخطاء</button>
+          <button type="button" class="tab" data-tab="plan">برومبت الخطة</button>
+          <button type="button" class="tab" data-tab="uiux">UI/UX</button>
+          <button type="button" class="tab" data-tab="ux">تجربة المستخدم</button>
+          <button type="button" class="tab" data-tab="rules">القواعد المعتمدة</button>
+          <button type="button" class="tab" data-tab="suggestions">اقتراحات قواعد</button>
+          <button type="button" class="tab" data-tab="prs">روابط PR</button>
+          <button type="button" class="tab" data-tab="audit">سجل التدقيق</button>
+        </div>
+        <div id="memory-panel"></div>
       </div>
-      <label>وصف / الهدف</label>
-      <textarea id="memory-new-desc" rows="2" placeholder="هدف المشروع"></textarea>
-      <p><button class="secondary" id="memory-create" type="button">إنشاء مشروع</button></p>
-      <p class="flash" id="memory-msg"></p>
-      <div class="tabs" id="memory-tabs">
-        <button type="button" class="tab active" data-tab="tasks">المهام</button>
-        <button type="button" class="tab" data-tab="errors">الأخطاء</button>
-        <button type="button" class="tab" data-tab="plan">برومبت الخطة</button>
-        <button type="button" class="tab" data-tab="uiux">UI/UX</button>
-        <button type="button" class="tab" data-tab="ux">تجربة المستخدم</button>
-        <button type="button" class="tab" data-tab="rules">القواعد المعتمدة</button>
-        <button type="button" class="tab" data-tab="suggestions">اقتراحات قواعد</button>
-        <button type="button" class="tab" data-tab="prs">روابط PR</button>
-        <button type="button" class="tab" data-tab="audit">سجل التدقيق</button>
-      </div>
-      <div id="memory-panel"></div>
-    </div>
+    </section>
 
-    <div class="card">
-      <h2>إعدادات قابلة للتوسعة</h2>
-      <p class="muted">أي مفتاح/قيمة يُحفظ في SQLite ويُستخدم لاحقًا دون تعديل الكود.</p>
-      <div id="settings"></div>
-      <div class="row">
-        <div class="grow">
-          <label>مفتاح جديد</label>
-          <input id="new-key" placeholder="feature_flag" />
+    <section class="section" id="sec-settings">
+      <div class="card">
+        <div class="card-head"><h2>إعدادات قابلة للتوسعة</h2></div>
+        <p class="muted">أي مفتاح/قيمة يُحفظ في SQLite ويُستخدم لاحقًا دون تعديل الكود.</p>
+        <div id="settings"></div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="new-key">مفتاح جديد</label>
+            <input id="new-key" placeholder="feature_flag" />
+          </div>
+          <div class="field">
+            <label for="new-value">قيمة</label>
+            <input id="new-value" placeholder="on" />
+          </div>
         </div>
-        <div class="grow">
-          <label>قيمة</label>
-          <input id="new-value" placeholder="on" />
-        </div>
+        <p><button class="secondary" id="save-settings" type="button">حفظ الإعدادات</button></p>
+        <p class="flash" id="settings-msg"></p>
+        <p class="muted" id="mcp-help"></p>
       </div>
-      <p><button class="secondary" id="save-settings">حفظ الإعدادات</button></p>
-      <p class="flash" id="settings-msg"></p>
-      <p class="muted" id="mcp-help"></p>
-    </div>
+    </section>
   </div>
-  <script src="/app.js"></script>
-  <script src="/memory-ui.js"></script>
+  <script src="/app.js?v=ui3"></script>
+  <script src="/memory-ui.js?v=ui3"></script>
 </body>
 </html>

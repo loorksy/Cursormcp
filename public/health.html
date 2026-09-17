@@ -3,15 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b1017" />
   <title>صحة الخدمة — MCP Cursor Bridge</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=ui3" />
 </head>
 <body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <h1>MCP Cursor Bridge</h1>
+          <div class="muted">صفحة الصحة العامة</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a href="/login">تسجيل الدخول</a>
+      </div>
+    </div>
+  </header>
   <div class="wrap">
     <div class="card">
-      <h1>حالة MCP Cursor Bridge</h1>
-      <p class="muted">صفحة عامة لمراقبة أن الجسر يعمل.</p>
-      <pre id="out" class="muted">جاري التحميل…</pre>
+      <p class="kicker">مراقبة</p>
+      <h1>حالة الخدمة</h1>
+      <p class="muted">صفحة عامة للتأكد أن الجسر يعمل. لا تتضمن أسرارًا.</p>
+      <pre id="out" class="health-json">جاري التحميل…</pre>
     </div>
   </div>
   <script>
