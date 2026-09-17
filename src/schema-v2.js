@@ -121,6 +121,26 @@ export function ensureOrchestratorTables() {
     );
     CREATE INDEX IF NOT EXISTS idx_events_unprocessed ON events(processed_at, attempts);
     CREATE INDEX IF NOT EXISTS idx_agents_state ON agents(state);
+    CREATE TABLE IF NOT EXISTS intel_cache (
+      cache_key TEXT PRIMARY KEY,
+      sha TEXT NOT NULL DEFAULT '',
+      kind TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS intel_access_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL,
+      actor TEXT NOT NULL DEFAULT '',
+      tool TEXT NOT NULL,
+      repository TEXT NOT NULL DEFAULT '',
+      path TEXT NOT NULL DEFAULT '',
+      ref TEXT NOT NULL DEFAULT '',
+      request_id TEXT NOT NULL DEFAULT '',
+      status INTEGER NOT NULL,
+      code TEXT NOT NULL DEFAULT ''
+    );
   `);
   addColumn("tasks", "role", "TEXT NOT NULL DEFAULT ''");
   addColumn("tasks", "blocked_reason", "TEXT NOT NULL DEFAULT ''");

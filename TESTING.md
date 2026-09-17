@@ -16,5 +16,11 @@ There is no TypeScript. `npm run typecheck` is syntax `node --check` on the serv
 | `test/tasks-deps.test.js` | blocked until `done_verified` |
 | `test/e2e-lifecycle.test.js` | project → task → mock Cursor agent → HMAC webhook → events → Telegram authz |
 | `test/failure-heal.test.js` | verifier failure; max retries → task `blocked` |
+| `test/intel-redact.test.js` | secret redaction, 10k pagination, traversal |
+| `test/intel-local-git.test.js` | real git tree/read/search/diff/blame + mocked GitHub PR/CI/e2e |
+| `test/intel-perf.test.js` | 120-file git tree pagination |
+| `test/intel-filesystem.test.js` | non-git mapped checkout vs empty GitHub `main` |
+
+Live Cursor create is **not** invoked by CI. Live GitHub uses `GITHUB_TOKEN` when present; unit tests mock `GITHUB_API_BASE_URL`.
 
 Live Cursor create is **not** invoked by CI. Set `E2E_CREATE_AGENT=1` only for a manual probe against a real key. Mock servers implement `/v0/agents`, `/v1/agents`, runs, and cancel.

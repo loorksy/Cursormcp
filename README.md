@@ -4,7 +4,7 @@
 
 الإنتاج: systemd `mcp-cursor-bridge` على `127.0.0.1:18800` خلف https://mcp.lork.cloud
 
-اقرأ بالترتيب: [AUDIT.md](AUDIT.md) → [ARCHITECTURE.md](ARCHITECTURE.md) → [DEPLOYMENT.md](DEPLOYMENT.md) → [API.md](API.md) → [WEBHOOKS.md](WEBHOOKS.md) → [TELEGRAM.md](TELEGRAM.md) → [SECURITY.md](SECURITY.md) → [TESTING.md](TESTING.md) → [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+اقرأ بالترتيب: [AUDIT.md](AUDIT.md) → [AUDIT_REPOSITORY_INTELLIGENCE.md](AUDIT_REPOSITORY_INTELLIGENCE.md) → [REPOSITORY_INTELLIGENCE.md](REPOSITORY_INTELLIGENCE.md) → [MCP_TOOLS.md](MCP_TOOLS.md) → [ARCHITECTURE.md](ARCHITECTURE.md) → [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## تشغيل محلي
 
@@ -39,6 +39,7 @@ npm start
 - `list_repos` — المستودعات المتاحة
 - `list_models` — النماذج المتاحة
 - `list_agents` — سرد الـ agents
+- أدوات الاستكشاف: `repo_tree`, `repo_file_read`, `repo_search`, `git_diff`, `github_pull_request`, `project_snapshot`, `project_audit` — انظر [MCP_TOOLS.md](MCP_TOOLS.md)
 
 عنوان MCP: `https://mcp.lork.cloud/mcp`
 

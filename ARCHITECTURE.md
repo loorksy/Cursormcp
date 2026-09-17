@@ -16,6 +16,10 @@ Claude / dashboard / Telegram
   Processors → state machine → verification → healer → Telegram
         ▲
    Poller (POLL_INTERVAL_SECONDS)
+
+Intelligence (read-only source):
+  MCP intel tools → allowlist → local git and/or GitHub REST
+                 → redaction → pagination → MCP JSON
 ```
 
 ## Why SQLite, not Redis/Postgres

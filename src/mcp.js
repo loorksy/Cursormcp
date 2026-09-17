@@ -15,6 +15,7 @@ import {
 import { getSetting, log, logRequest } from "./lib.js";
 import { registerMemoryMcpTools } from "./memory-mcp.js";
 import { registerV2McpTools } from "./mcp-v2.js";
+import { registerIntelMcpTools } from "./intel-mcp.js";
 import { resolveActorFromRequest, runWithActor } from "./memory.js";
 
 const transports = new Map();
@@ -203,6 +204,7 @@ export function createBridgeMcpServer() {
 
   registerMemoryMcpTools(server);
   registerV2McpTools(server);
+  registerIntelMcpTools(server);
 
   return server;
 }
