@@ -1,0 +1,24 @@
+{
+  "name": "mcp-cursor-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP bridge to Cursor Cloud Agents API with a small web dashboard",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loorksy/Cursormcp.git"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "express": "^4.22.3",
+    "zod": "^4.6.5"
+  }
+}

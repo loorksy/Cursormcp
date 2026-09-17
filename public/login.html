@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>تسجيل الدخول — MCP Cursor Bridge</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="login-box card">
+    <h1>MCP Cursor Bridge</h1>
+    <p class="muted">لوحة التحكم محمية. أدخل بيانات الدخول.</p>
+    <form id="form">
+      <p>
+        <label for="username">اسم المستخدم</label>
+        <input id="username" name="username" autocomplete="username" required />
+      </p>
+      <p>
+        <label for="password">كلمة المرور</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+      </p>
+      <button type="submit">دخول</button>
+      <p class="flash" id="msg"></p>
+    </form>
+  </div>
+  <script>
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("msg");
+      msg.textContent = "";
+      const body = {
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value,
+      };
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        location.href = "/";
+        return;
+      }
+      msg.textContent = "بيانات الدخول غير صحيحة.";
+    });
+  </script>
+</body>
+</html>
