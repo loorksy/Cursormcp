@@ -85,7 +85,19 @@
         <button class="secondary" id="tg-test">اختبار الإشعار</button>
       </p>
       <p class="flash" id="tg-msg"></p>
-      <p class="muted" id="tg-webhook"></p>
+      <h2>Webhook لـ Cursor</h2>
+      <p class="muted">انسخ الرابط والسر بعد تسجيل الدخول والصقهما عند إنشاء الـ agent في Cursor (ليسا علنيين). السر يظهر هنا كاملًا غير مقنّع لنسخه حرفيًا.</p>
+      <label for="tg-webhook-url">رابط الـ webhook</label>
+      <div class="row">
+        <input id="tg-webhook-url" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />
+        <button type="button" class="secondary" id="copy-webhook-url">نسخ</button>
+      </div>
+      <label for="tg-webhook-secret">السر (CURSOR_WEBHOOK_SECRET)</label>
+      <div class="row">
+        <input id="tg-webhook-secret" class="grow mono" type="text" readonly dir="ltr" spellcheck="false" autocomplete="off" />
+        <button type="button" class="secondary" id="copy-webhook-secret">نسخ</button>
+      </div>
+      <p class="muted" id="tg-copy-status"></p>
       <h2>آخر الإشعارات</h2>
       <div style="overflow:auto">
         <table>

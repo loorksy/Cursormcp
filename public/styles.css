@@ -49,6 +49,10 @@ button.danger { background: var(--bad); color: #1a0000; }
 }
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .grow { flex: 1; min-width: 220px; }
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
 label { display: block; color: var(--muted); margin: 0 0 6px; font-size: 13px; }
 h1, h2 { margin: 0 0 12px; }
 h1 { font-size: 22px; }
