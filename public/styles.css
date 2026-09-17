@@ -77,4 +77,30 @@ th { color: var(--muted); font-weight: 600; }
 .ok { color: var(--ok); }
 .hidden { display: none; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+button.tab {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  font-weight: 600;
+  padding: 8px 12px;
+}
+button.tab.active { background: var(--accent); color: #051221; }
+.note-box {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--panel-2);
+}
+.badge.done_verified, .badge.approved { background: #163a29; color: #8ef0bb; }
+.badge.done_proposed, .badge.pending { background: #3a3116; color: #f5c14a; }
+.badge.in_progress, .badge.partial { background: #1d3a63; color: #9ecbff; }
+pre.capsule {
+  white-space: pre-wrap;
+  font-size: 13px;
+  background: var(--bg);
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+}
