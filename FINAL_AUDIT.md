@@ -42,11 +42,25 @@ Applied via `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` at startup (no separate
 ## Tests executed
 
 ```
-npm test   → 11 passed, 0 failed (node:test, process isolation)
+npm test   → 13 passed, 0 failed (node:test, process isolation)
 npm run lint / typecheck → node --check on server modules, pass
 ```
 
-No TypeScript compiler. No live `POST /v1/agents` against Cursor in CI (mock HTTP). Live HMAC 401 and `/health` still to be confirmed after VPS deploy of this branch.
+No TypeScript compiler. No live `POST /v1/agents` against Cursor in CI (mock HTTP).
+
+## Live VPS verification (mcp-cursor-bridge unit only)
+
+- `systemctl is-active mcp-cursor-bridge` → active
+- nginx / docker / postgresql / redis-server left active (not restarted)
+- `GET /health` 200, `orchestrator: true`
+- `GET /ready` 200, `db: true`
+- `https://mcp.lork.cloud/health` 200
+- `POST /webhooks/cursor` without HMAC → 401
+- `POST /mcp` without token → 401
+- `GET /system-guide` 200, no project names leaked
+- SQLite `app.db` gained V2 tables (`agents`, `events`, `verifications`, …); `tasks.role` / `projects.goal` present
+- Poller started (`poller_started`, 30000ms)
+- Unauthenticated `/api/v2/agents` initially 302 because `app.use("/api", requireAuth)` stripped `req.path`; fixed to 401 JSON (`isApiRequest` uses `originalUrl` / `baseUrl`)
 
 ## Known limitations / risks
 
@@ -56,7 +70,10 @@ No TypeScript compiler. No live `POST /v1/agents` against Cursor in CI (mock HTT
 4. Compose worker + API sharing SQLite WAL across containers is for portable installs only; production is one process.
 5. Browser tests are not an automatic verifier unless a project `verify_json` says so.
 6. `QUEUED`/`WAITING` are local names; Cursor does not send those strings.
+7. Live Telegram `setWebhook` was not called (would overwrite any existing bot webhook). Inbound `POST /webhooks/telegram` is mounted; interactive buttons need a one-time setWebhook.
 
 ## Remaining
 
 Dashboard UI for `/api/v2/*` is API-first (existing RTL dashboard still manages launch/memory). A dedicated orchestrator panel was not added to `public/app.html` in this pass.
+
+Live Telegram outbound was exercised after deploy (broadcast test); inbound Telegram webhook secret remains empty until `setWebhook` is configured.

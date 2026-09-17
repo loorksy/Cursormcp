@@ -112,9 +112,14 @@ function sessionIdFrom(req) {
   return parseCookie(req.headers.cookie, COOKIE);
 }
 
+function isApiRequest(req) {
+  const url = String(req.originalUrl || req.url || req.path || "");
+  return url.startsWith("/api/") || req.baseUrl === "/api" || String(req.path || "").startsWith("/api/");
+}
+
 function requireAuth(req, res, next) {
   if (validSession(sessionIdFrom(req))) return next();
-  if (req.path.startsWith("/api/")) {
+  if (isApiRequest(req)) {
     return res.status(401).json({ error: "unauthorized" });
   }
   return res.redirect("/login");
