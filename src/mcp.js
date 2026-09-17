@@ -37,8 +37,8 @@ function errorResult(err) {
 export function createBridgeMcpServer() {
   const server = new McpServer(
     {
-      name: "mcp-cursor-bridge",
-      version: "1.0.0",
+      name: "mcp-agents-bridge",
+      version: "1.1.0",
     },
     {
       capabilities: { logging: {} },

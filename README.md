@@ -18,8 +18,11 @@
 - `list_models` — النماذج المتاحة
 - `list_agents` — سرد الـ agents
 
-عنوان MCP: `https://mcp.lork.cloud/mcp`  
-المصادقة: `Authorization: Bearer <MCP_AUTH_TOKEN>`
+عنوان MCP: `https://mcp.lork.cloud/mcp`
+
+المصادقة لـ Claude.ai Connectors: OAuth (اكتشاف `/.well-known/oauth-*` + تسجيل ديناميكي في `/register` + صفحة `/oauth/login`).
+
+للعملاء اليدويين: `Authorization: Bearer <MCP_AUTH_TOKEN>`
 
 ## التشغيل المحلي
 

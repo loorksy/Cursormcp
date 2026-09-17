@@ -34,6 +34,7 @@ import {
   safeJson,
 } from "./lib.js";
 import { handleMcpPost, handleMcpSession, mcpSessionCount } from "./mcp.js";
+import { mountOAuth } from "./oauth.js";
 
 loadEnvFile();
 ensureDirs();
@@ -101,6 +102,7 @@ function publicHealth() {
       listening: true,
       path: "/mcp",
       sessions: mcpSessionCount(),
+      oauth: true,
     },
     apiKeyConfigured: apiKeyConfigured(),
     uptimeSec: Math.round((Date.now() - startedAt) / 1000),
@@ -148,10 +150,11 @@ app.post("/api/logout", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+const { oauthBearer } = mountOAuth(app, { timingSafeString });
+
 function requireMcp(req, res, next) {
   if (mcpAuthorized(req)) return next();
-  res.set("WWW-Authenticate", 'Bearer realm="mcp-cursor-bridge"');
-  return res.status(401).json({ error: "mcp unauthorized" });
+  return oauthBearer(req, res, next);
 }
 
 app.post("/mcp", requireMcp, handleMcpPost);
