@@ -1,40 +1,90 @@
 import { loadConfig } from "./config.js";
 import { log } from "./lib.js";
 
-const GITHUB = "https://api.github.com";
+export function githubApiBase() {
+  return (process.env.GITHUB_API_BASE_URL || "https://api.github.com").replace(/\/$/, "");
+}
 
 export function parseGithubRepo(url) {
   const m = String(url || "").match(/github\.com\/([^/\s]+)\/([^/\s#?]+)/i);
   if (!m) return null;
-  return { owner: m[1], repo: String(m[2]).replace(/\.git$/, "") };
+  const owner = m[1];
+  const repo = String(m[2]).replace(/\.git$/, "");
+  if (!/^[A-Za-z0-9._-]+$/.test(owner) || !/^[A-Za-z0-9._-]+$/.test(repo)) return null;
+  return { owner, repo };
+}
+
+export function parseOwnerRepo(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return null;
+  const fromUrl = parseGithubRepo(raw);
+  if (fromUrl) return fromUrl;
+  const m = raw.match(/^([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)$/);
+  if (!m) return null;
+  return { owner: m[1], repo: m[2].replace(/\.git$/, "") };
 }
 
 export function parsePrUrl(url) {
   const m = String(url || "").match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/i);
   if (!m) return null;
+  if (!/^[A-Za-z0-9._-]+$/.test(m[1]) || !/^[A-Za-z0-9._-]+$/.test(m[2])) return null;
   return { owner: m[1], repo: m[2], number: Number(m[3]), url };
 }
 
-async function githubFetch(path, { method = "GET", body } = {}) {
+function assertGithubPath(path) {
+  if (typeof path !== "string" || !path.startsWith("/") || path.includes("://") || path.includes("@") || path.includes("\\")) {
+    const err = new Error("invalid GitHub API path");
+    err.code = "SSRF_REJECTED";
+    throw err;
+  }
+}
+
+export async function githubRequest(path, { method = "GET", body, accept, raw = false, timeoutMs = 25000 } = {}) {
+  assertGithubPath(path);
   const token = loadConfig().githubToken;
   const headers = {
-    Accept: "application/vnd.github+json",
+    Accept: accept || "application/vnd.github+json",
     "User-Agent": "mcp-cursor-bridge",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(GITHUB + path, {
-    method,
-    headers: { ...headers, ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(json.message || `GitHub ${res.status}`);
-    err.status = res.status;
-    err.body = json;
-    throw err;
+  if (body) headers["Content-Type"] = "application/json";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(githubApiBase() + path, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+    if (raw) {
+      const text = await res.text();
+      if (!res.ok) {
+        const err = new Error(`GitHub ${res.status}`);
+        err.status = res.status;
+        err.code = res.status === 404 ? "NOT_FOUND" : "GITHUB_ERROR";
+        err.retryable = res.status >= 500 || res.status === 429;
+        throw err;
+      }
+      return { text, status: res.status };
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(json.message || `GitHub ${res.status}`);
+      err.status = res.status;
+      err.body = json;
+      err.code = res.status === 404 ? "NOT_FOUND" : res.status === 403 ? "GITHUB_FORBIDDEN" : "GITHUB_ERROR";
+      err.retryable = res.status >= 500 || res.status === 429;
+      throw err;
+    }
+    return json;
+  } finally {
+    clearTimeout(timer);
   }
-  return json;
+}
+
+async function githubFetch(path, opts) {
+  return githubRequest(path, opts);
 }
 
 export async function inspectPullRequest(prUrl) {
